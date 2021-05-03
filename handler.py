@@ -11,7 +11,7 @@ from urllib.parse import urlencode
 from telegram import Update, ForceReply, Bot, User, InlineKeyboardMarkup, InlineKeyboardButton, constants
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CommandHandler, CallbackQueryHandler, CallbackContext, Filters, ConversationHandler
 
-from commands import start, join, leave, show_duties, create_duties, create_schedule, show_schedule, next_duty, mark_as_done, callback_handler, remind, get_chat_id, reschedule, add_to_waitlist
+from commands import start, join, leave, show_duties, create_duties, create_schedule, show_schedule, next_duty, mark_as_done, callback_handler, remind, get_chat_id, reschedule, add_to_waitlist, create_roster
 
 # Logging is cool!
 logger = logging.getLogger()
@@ -54,6 +54,9 @@ LIM_FAMILY_USER_IDS = [
 
 VAMONKE_ID = 265435469
 
+HOUSE_CHORES_BOT_USERNAME = 'HouseChoresBot'
+HOUSE_CHORES_BOT_ID = 1783406286
+
 def configure_telegram():
     """
     Configures the bot with a Telegram Token.
@@ -80,6 +83,18 @@ def send_beta(update):
 
     alert_creator(message)
 
+def handle_kick(update):
+    user_text = update.effective_user.mention_markdown_v2()
+    chat_title = update.effective_chat.title
+    message = fr"{user_text} kicked HouseChoresBot from {chat_title}\! 🥺"
+    alert_creator(message)
+
+def handle_add(update):
+    user_text = update.effective_user.mention_markdown_v2()
+    chat_title = update.effective_chat.title
+    message = fr"{user_text} added HouseChoresBot to {chat_title}\! 😀"
+    alert_creator(message)
+
 def alert_creator(message):
     bot = configure_telegram()
     bot.send_message(
@@ -103,16 +118,37 @@ def webhook(event, context):
         logger.info('Body: {}'.format(body))
         update = Update.de_json(body, bot)
 
-        reply_markup = None
-        message = None
+        # logger.info('Update: {}'.format(update))
+        # logger.info('Message: {}'.format(update.message))
+        # logger.info('left_chat_member: {}'.format(update.message.left_chat_member))
+        # logger.info('left_chat_member.id: {}'.format(update.message.left_chat_member.id))
+        # logger.info('left_chat_member.id: {}'.format(update.message.left_chat_member.id))
 
+        # Check if bot is kicked
+        is_kicked = update.message is not None and update.message.left_chat_member is not None and update.message.left_chat_member.id == HOUSE_CHORES_BOT_ID
+        logger.info('is_kicked: {}'.format(is_kicked))
+        if is_kicked:
+            handle_kick(update)
+            return OK_RESPONSE
+
+        # Check if bot is added
+        is_added = update.my_chat_member is not None and update.my_chat_member.new_chat_member is not None and update.my_chat_member.new_chat_member.user.id == HOUSE_CHORES_BOT_ID
+        if is_added:
+            handle_add(update)
+
+        # Check for whitelisted IDs
         if update.effective_user is None or update.effective_user.id not in LIM_FAMILY_USER_IDS:
             send_beta(update)
             return OK_RESPONSE
 
+        reply_markup = None
+        message = None
+
         if update.callback_query and update.callback_query.message:
             chat_id = update.callback_query.message.chat.id
             message = callback_handler(update)
+        elif update.message is None:
+            print('What\'s going on here????')
         else:
             chat_id = update.message.chat.id
             text = update.message.text
@@ -224,16 +260,17 @@ def dev():
     # dispatcher.add_handler(CommandHandler("createschedule", lambda update, _ : function_wrapper(create_schedule, update)))
     # dispatcher.add_handler(CommandHandler("schedule", lambda update, _ : function_wrapper(show_schedule, update)))
     dispatcher.add_handler(CommandHandler("start", lambda update, _ : function_wrapper(start, update)))
+    dispatcher.add_handler(CommandHandler("createroster", create_roster))
     # dispatcher.add_handler(CommandHandler("nextduty", lambda update, _ : function_wrapper(next_duty, update)))
     # dispatcher.add_handler(CommandHandler("done", lambda update, _ : function_wrapper(mark_as_done, update)))
     # dispatcher.add_handler(CommandHandler("reschedule", lambda update, _ : function_wrapper(reschedule, update)))
 
-    updater.dispatcher.add_handler(CallbackQueryHandler(lambda update, _ : function_wrapper(callback_handler, update)))
+    # updater.dispatcher.add_handler(CallbackQueryHandler(lambda update, _ : function_wrapper(callback_handler, update)))
 
     updater.start_polling()
     updater.idle()
 
-if __name__ == '__main__':
-    is_dev = True
-    dev()
+# if __name__ == '__main__':
+#     is_dev = True
+#     dev()
     # routine(None, None)

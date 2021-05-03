@@ -379,7 +379,7 @@ def reschedule_callback(update, query_data):
     query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
 
 def create_schedule(update: Update) -> str:
-    """Create scheulde with chat_id when the command /createschedule is issued."""    
+    """Create schedule with chat_id when the command /createschedule is issued."""
 
     chat_id = update.message.chat.id
     name = "🌀 Laundry duty roster 🧺 🌀"
@@ -401,6 +401,43 @@ def create_schedule(update: Update) -> str:
     message = fr'{name} created'
 
     return message
+
+def create_roster(update: Update, context: CallbackContext) -> str:
+    """Create roster with chat_id when the command /createroster is issued."""
+
+    chat_id = update.message.chat.id
+    text = update.message.text
+    if context:
+        name = ' '.join(context.args)
+        # breakpoint()
+    else:
+        name = text.replace('/createroster ', '', 1)
+
+    if not name:
+        name = 'OI'
+
+    # rosters = setup_mongodb()["rosters"]
+    # rosters.find_one_and_update(
+    #     {
+    #         'chat_id': chat_id,
+    #     }, {
+    #         '$setOnInsert': {
+    #             'name': name,
+    #             'chat_id': chat_id,
+    #             'createdAt': datetime.datetime.now(),
+    #             'interval': 'week'
+    #         },
+    #     },
+    #     upsert=True
+    # )
+    message = fr'{name} created'
+
+    update.message.reply_markdown_v2(
+        text=message,
+        reply_markup=ForceReply()
+    )
+
+    # return (message, ForceReply())
 
 def show_duties(update: Update) -> str:
     """Send a message when the command /leave is issued."""
