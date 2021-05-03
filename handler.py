@@ -98,7 +98,10 @@ def webhook(event, context):
 
     if event.get('httpMethod') == 'POST' and event.get('body'): 
         logger.info('Message received')
-        update = Update.de_json(json.loads(event.get('body')), bot)
+        
+        body = json.loads(event.get('body'))
+        logger.info('Body: {}'.format(body))
+        update = Update.de_json(body, bot)
 
         reply_markup = None
         message = None
