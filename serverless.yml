@@ -1,0 +1,33 @@
+service: house-chores-bot
+
+provider:
+  name: aws
+  runtime: python3.7
+  profile: serverless
+  region: ap-southeast-1
+  environment:
+    TELEGRAM_TOKEN: ${file(./serverless.env.yml):TELEGRAM_TOKEN, ''}
+    MONGODB_URI: ${file(./serverless.env.yml):MONGODB_URI, ''}
+
+functions:
+  webhook:
+    handler: handler.webhook
+    events:
+      - http: POST /
+
+  set_webhook:
+    handler: handler.set_webhook
+    events:
+      - http: POST /set_webhook
+
+  routine:
+    handler: handler.routine
+    events:
+      - schedule: cron(0 2 * * ? *)
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: non-linux

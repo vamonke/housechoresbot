@@ -1,0 +1,19 @@
+{
+  "name": "house-chores-bot",
+  "description": "This serverless Telegram Bot keeps track and sends reminder for household chores🤖 ",
+  "version": "0.1.0",
+  "keywords": [
+    "python",
+    "bot",
+    "telegram",
+    "aws",
+    "lambda",
+    "serverless"
+  ],
+  "author": "vamonke",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "serverless-python-requirements": "^5.1.1"
+  }
+}
