@@ -549,7 +549,7 @@ def add_to_waitlist(update):
     )
 
     user_text = user.mention_markdown_v2()
-    message = fr"👋 Hello {user_text}\! I\'m [Varick](tg://user?id=265435469)\, creator of House Chores Bot\. The bot is currently in closed beta\. Will let you know when it\'s ready for you 😃"
+    message = fr"👋 Hello {user_text}\! House Chores Bot is currently in closed beta\. Will let you know when it\'s ready for you 😃"
     return message
 
 def user_next_duty(mongo_db, user_dict, update):

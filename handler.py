@@ -46,7 +46,7 @@ user_properties = [
 ]
 
 LIM_FAMILY_USER_IDS = [
-    265435469, # VAMONKE
+    # 265435469, # VAMONKE
     808439673,
     278239097,
     59546722,
@@ -72,7 +72,7 @@ def configure_telegram():
 
 def send_beta(update):
     message = add_to_waitlist(update)
-    if message is not None:
+    if update.message is not None and message is not None:
         update.message.reply_markdown_v2(message, quote=False)
         logger.info(message)
 
@@ -103,6 +103,29 @@ def alert_creator(message):
         parse_mode=constants.PARSEMODE_MARKDOWN_V2,
     )
 
+def get_is_kicked(update):
+    return (
+        update.message is not None and \
+        update.message.left_chat_member is not None and \
+        update.message.left_chat_member.id == HOUSE_CHORES_BOT_ID
+    ) or (
+        update.my_chat_member is not None and \
+        update.my_chat_member.old_chat_member is not None and \
+        update.my_chat_member.old_chat_member.user.id == HOUSE_CHORES_BOT_ID
+    ) or (
+        update.my_chat_member is not None and \
+        update.my_chat_member.new_chat_member is not None and \
+        update.my_chat_member.new_chat_member.user.id == HOUSE_CHORES_BOT_ID and \
+        update.my_chat_member.new_chat_member.status == 'kicked'
+    )
+
+def get_is_added(update):
+    return (
+        update.message is not None and \
+        update.message.new_chat_members is not None and \
+        any(ncm.id == HOUSE_CHORES_BOT_ID for ncm in update.message.new_chat_members)
+    )
+
 def webhook(event, context):
     """
     Runs the Telegram webhook.
@@ -124,17 +147,23 @@ def webhook(event, context):
         # logger.info('left_chat_member.id: {}'.format(update.message.left_chat_member.id))
         # logger.info('left_chat_member.id: {}'.format(update.message.left_chat_member.id))
 
+        # Check if bot is added
+        is_added = get_is_added(update)
+        logger.info('is_added: {}'.format(is_added))
+        if is_added:
+            handle_add(update)
+            return OK_RESPONSE
+
         # Check if bot is kicked
-        is_kicked = update.message is not None and update.message.left_chat_member is not None and update.message.left_chat_member.id == HOUSE_CHORES_BOT_ID
+        is_kicked = get_is_kicked(update)
         logger.info('is_kicked: {}'.format(is_kicked))
         if is_kicked:
             handle_kick(update)
             return OK_RESPONSE
 
-        # Check if bot is added
-        is_added = update.my_chat_member is not None and update.my_chat_member.new_chat_member is not None and update.my_chat_member.new_chat_member.user.id == HOUSE_CHORES_BOT_ID
-        if is_added:
-            handle_add(update)
+        if update.callback_query is None and update.message is None:
+            logger.warn('No callback_query or message')
+            return OK_RESPONSE
 
         # Check for whitelisted IDs
         if update.effective_user is None or update.effective_user.id not in LIM_FAMILY_USER_IDS:
@@ -147,8 +176,6 @@ def webhook(event, context):
         if update.callback_query and update.callback_query.message:
             chat_id = update.callback_query.message.chat.id
             message = callback_handler(update)
-        elif update.message is None:
-            print('What\'s going on here????')
         else:
             chat_id = update.message.chat.id
             text = update.message.text
