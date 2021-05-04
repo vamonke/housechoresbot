@@ -8,10 +8,47 @@ import datetime
 import pprint
 from urllib.parse import urlencode
 
-from telegram import Update, ForceReply, Bot, User, InlineKeyboardMarkup, InlineKeyboardButton, constants
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CommandHandler, CallbackQueryHandler, CallbackContext, Filters, ConversationHandler
+from telegram import (
+    Update,
+    Bot,
+    User,
+    InlineKeyboardMarkup,
+    # InlineKeyboardButton,
+    constants
+)
 
-from commands import start, join, leave, show_duties, create_duties, create_schedule, show_schedule, next_duty, mark_as_done, callback_handler, remind, get_chat_id, reschedule, add_to_waitlist, create_roster
+from telegram.ext import (
+    Updater,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    CallbackContext,
+    ConversationHandler,
+    Filters,
+)
+
+from commands_v2 import (
+    start,
+    join,
+    # leave,
+    show_duties,
+    # create_duties,
+    # create_schedule,
+    show_schedule,
+    next_duty,
+    mark_as_done,
+    # callback_handler,
+    remind,
+    get_chat_id,
+    reschedule,
+    add_to_waitlist,
+    create_roster,
+    receive_roster_name,
+    join_roster,
+    add_to_roster,
+    cancel,
+    GET_ROSTER_NAME,
+)
 
 # Logging is cool!
 logger = logging.getLogger()
@@ -34,7 +71,9 @@ logger = logging.getLogger(__name__)
 
 # TELEGRAM_TOKEN = '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
 TEST_TELEGRAM_TOKEN = '1798724954:AAGuKOTuVWX8qfuRLUx1EU82Di9czAR6kFs'
-is_dev = False
+
+ENVIRONMENT = os.environ.get('ENVIRONMENT')
+IS_DEV = ENVIRONMENT is not 'prod'
 
 user_properties = [
     'id',
@@ -184,14 +223,14 @@ def webhook(event, context):
                 message = start(update)
             elif text == '/join':
                 message, reply_markup = join(update)
-            elif text == '/leave':
-                message = leave(update)
+            # elif text == '/leave':
+            #     message = leave(update)
             elif text == '/duties':
                 message = show_duties(update)
-            elif text == '/createduties':
-                message = create_duties()
-            elif text == '/createschedule':
-                message = create_schedule(update)
+            # elif text == '/createduties':
+            #     message = create_duties()
+            # elif text == '/createschedule':
+            #     message = create_schedule(update)
             elif text == '/schedule':
                 message = show_schedule(update)
             elif text == '/reschedule':
@@ -258,46 +297,35 @@ def routine(event, context):
 
     create_duties()
 
-def function_wrapper(fn, update):
-    print('Running', fn.__name__)
-    if update.effective_user is None or update.effective_user.id not in LIM_FAMILY_USER_IDS:
-        send_beta(update)
-    else:
-        message = fn(update)
-        reply_markup = None
-
-        if type(message) is tuple:
-            message, reply_markup = message
-
-        if message is not None:
-            update.message.reply_markdown_v2(
-                text=message,
-                reply_markup=reply_markup
-            )
-
-def dev():
-    TEST_TELEGRAM_TOKEN = '1798724954:AAGuKOTuVWX8qfuRLUx1EU82Di9czAR6kFs'
+def main():
     updater = Updater(TEST_TELEGRAM_TOKEN)
     dispatcher = updater.dispatcher
 
+    dispatcher.add_handler(CommandHandler("start", start))
+    # dispatcher.add_handler(CommandHandler("done", lambda update, _ : function_wrapper(mark_as_done, update)))
+    # dispatcher.add_handler(CommandHandler("duties", lambda update, _ : function_wrapper(show_duties, update)))
+    # dispatcher.add_handler(CommandHandler("schedule", lambda update, _ : function_wrapper(show_schedule, update)))
+    # dispatcher.add_handler(CommandHandler("reschedule", lambda update, _ : function_wrapper(reschedule, update)))
     # dispatcher.add_handler(CommandHandler("join", lambda update, _ : function_wrapper(join, update)))
     # dispatcher.add_handler(CommandHandler("leave", lambda update, _ : function_wrapper(leave, update)))
-    # dispatcher.add_handler(CommandHandler("duties", lambda update, _ : function_wrapper(show_duties, update)))
-    # dispatcher.add_handler(CommandHandler("createduties", lambda update, _ : function_wrapper(create_duties, update)))
-    # dispatcher.add_handler(CommandHandler("createschedule", lambda update, _ : function_wrapper(create_schedule, update)))
-    # dispatcher.add_handler(CommandHandler("schedule", lambda update, _ : function_wrapper(show_schedule, update)))
-    dispatcher.add_handler(CommandHandler("start", lambda update, _ : function_wrapper(start, update)))
-    dispatcher.add_handler(CommandHandler("createroster", create_roster))
     # dispatcher.add_handler(CommandHandler("nextduty", lambda update, _ : function_wrapper(next_duty, update)))
-    # dispatcher.add_handler(CommandHandler("done", lambda update, _ : function_wrapper(mark_as_done, update)))
-    # dispatcher.add_handler(CommandHandler("reschedule", lambda update, _ : function_wrapper(reschedule, update)))
 
-    # updater.dispatcher.add_handler(CallbackQueryHandler(lambda update, _ : function_wrapper(callback_handler, update)))
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('createroster', create_roster)],
+        states={
+            GET_ROSTER_NAME: [MessageHandler(Filters.text & ~Filters.command, receive_roster_name)],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
+    dispatcher.add_handler(conv_handler)
+
+    updater.dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern='^join\.'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern='^addtoroster\.'))
 
     updater.start_polling()
     updater.idle()
 
-# if __name__ == '__main__':
-#     is_dev = True
-#     dev()
+if __name__ == '__main__':
+    if IS_DEV:
+        main()
     # routine(None, None)
