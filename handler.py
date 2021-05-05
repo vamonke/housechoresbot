@@ -40,7 +40,7 @@ from commands_v2 import (
     # callback_handler,
     remind,
     get_chat_id,
-    reschedule,
+    # reschedule,
     add_to_waitlist,
     create_roster,
     receive_roster_name,

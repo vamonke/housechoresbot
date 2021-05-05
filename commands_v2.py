@@ -1,5 +1,6 @@
 import random
 import requests
+import pymongo
 import os
 import json
 import datetime
@@ -61,6 +62,8 @@ GET_ROSTER_NAME = 0
 # JOIN_ROSTER = 1
 # SELECT_DUTY_DAY = 2
 
+WEEKS_IN_ADVANCE = 2
+
 def start(update: Update, context: CallbackContext):
     """Return a message when the command /start is issued."""
     user = update.effective_user
@@ -89,18 +92,27 @@ def leave(update: Update):
 
     return fr'{user.mention_markdown_v2()} left'
 
-def create_user_duties(user_dict, update):
+def create_user_duties(user_dict, roster_id):
     """Create duties for a user"""
 
-    # print('user_dict', user_dict)
-    if user_dict is None or user_dict['isRemoved'] or 'dutyDay' not in user_dict:
+    if user_dict is None or 'dutyDay' not in user_dict:
         return
 
     # Get window to create duties
     now = datetime.datetime.now()
     today = datetime.datetime(now.year, now.month, now.day)
     start_of_cycle = today - datetime.timedelta(days=today.weekday())
-    end_of_cycle = start_of_cycle + datetime.timedelta(weeks=2)
+    end_of_cycle = start_of_cycle + datetime.timedelta(weeks=WEEKS_IN_ADVANCE)
+
+    # Remove future user duties from this roster
+    Duties.delete_many(
+        {
+            'user': user_dict['id'],
+            'roster_id': roster_id,
+            'isCompleted': False,
+            'date': { '$gte': today },
+        }
+    )
 
     # Get mongodb inserts
     requests = []
@@ -111,13 +123,26 @@ def create_user_duties(user_dict, update):
             date += datetime.timedelta(weeks=1)
             continue
         duty = {
-            'user': user_dict['id'],
-            'date': date,
-            'createdAt': now,
-            'isCompleted': False,
         }
         # logger.info('duty', duty)
-        request = pymongo.UpdateOne(duty, { '$setOnInsert': duty }, upsert=True)
+        request = pymongo.UpdateOne(
+            {
+                'user': user_dict['id'],
+                'date': date,
+                'roster_id': roster_id,
+                'isCompleted': False,
+            },
+            {
+                '$setOnInsert': {
+                    'user': user_dict['id'],
+                    'date': date,
+                    'roster_id': roster_id,
+                    'isCompleted': False,
+                    'createdAt': now,
+                }
+            },
+            upsert=True
+        )
         requests.append(request)
         date += datetime.timedelta(weeks=1)
 
@@ -125,7 +150,7 @@ def create_user_duties(user_dict, update):
     result = Duties.bulk_write(requests)
     logger.info('result', result.bulk_api_result)
 
-    user_next_duty(user_dict, update)
+    # user_next_duty(user_dict, update)
 
 # def create_duties():
 #     """Create duties when the command /createduties is issued."""
@@ -202,119 +227,6 @@ def show_schedule(update: Update):
 
     if anyday is not None:
         message += "\n" + fr"`Any`\: {anyday}"
-
-    return message
-
-def reschedule(update: Update):
-    """Reschedule a user's duty for this week"""
-
-    user = update.effective_user
-    user_text = user.mention_markdown_v2()
-
-    now = datetime.datetime.now()
-    today = datetime.datetime(now.year, now.month, now.day)
-    start_of_week = today - datetime.timedelta(days=today.weekday())
-
-    # Find this week's duty
-    duty = Duties.find_one({
-        'user': user.id,
-        # 'isCompleted': False,
-        'date': { '$gte': start_of_week }
-    }, sort=[('date', 1)])
-
-    if duty is None:
-        message = fr'{user_text} you have no laundry duty scheduled 🤨'
-        return (message, None)
-
-    # if 'isCompleted' in duty and duty['isCompleted']:
-    #     message = fr'{user_text} you have already done laundry for this week 🤗'
-    #     return (message, None)
-
-    duty_date = duty['date']
-    date = duty['date'].strftime("%A %-d %b")
-
-    message = fr'{user_text} you have a laundry duty scheduled on {date}\. When would you like to do it instead\?'
-
-    keyboard = []
-
-    proposed_date = today
-    end_of_window = today + datetime.timedelta(days=6)
-    while proposed_date < end_of_window:
-        day_string = proposed_date.strftime("%A %-d %b")
-        date_string = proposed_date.strftime("%c")
-        callback_data = fr"reschedule.{date_string}"
-        print(callback_data)
-        keyboard.append([InlineKeyboardButton(day_string, callback_data=callback_data)])
-        proposed_date += datetime.timedelta(days=1)
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    return (message, reply_markup)
-
-def reschedule_callback(update, query_data):
-    query = update.callback_query
-    user = update.effective_user
-    user_text = user.mention_markdown_v2()
-    
-    now = datetime.datetime.now()
-    today = datetime.datetime(now.year, now.month, now.day)
-    start_of_week = today - datetime.timedelta(days=today.weekday())
-
-    # Find this week's duty
-    duty = Duties.find_one({
-        'user': user.id,
-        'date': { '$gte': start_of_week }
-    }, sort=[('date', 1)])
-
-    if duty is None:
-        message = fr'{user_text} you have no laundry duty scheduled this week 🤨'
-        query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
-        return None
-
-    if 'isCompleted' in duty and duty['isCompleted']:
-        message = fr'{user_text} you have already done laundry for this week 🤗'
-        query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
-        return None
-
-    duty_date = datetime.datetime.strptime(query_data, "%c")
-
-    Duties.find_one_and_update(
-        { 'id': duty.id },
-        { '$set':
-            {
-                'date': duty_date,
-                'isMissed': False,
-            }
-        },
-        upsert=True,
-        return_document=pymongo.ReturnDocument.AFTER,
-    )
-
-    day = duty_date.strftime("%A")
-    message = f"{user_text} has moved their laundry duty to *{day}* for this week 👌"
-    query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
-
-def create_schedule(update: Update):
-    """Create schedule with chat_id when the command /createschedule is issued."""
-
-    chat_id = update.message.chat.id
-    name = "🌀 Laundry duty roster 🧺 🌀"
-    
-    schedules = setup_mongodb()["schedules"]
-    Schedules.find_one_and_update(
-        {
-            'chat_id': chat_id,
-        }, {
-            '$setOnInsert': {
-                'name': name,
-                'chat_id': chat_id,
-                'createdAt': datetime.datetime.now(),
-                'interval': 'week'
-            },
-        },
-        upsert=True
-    )
-    message = fr'{name} created'
 
     return message
 
@@ -459,7 +371,7 @@ def add_to_roster(update: Update, context: CallbackContext):
     message = f"{user_text} has chosen to do *{roster_name}* on *{day}* 👌"
     query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
 
-    # TODO: Create duties for next 2 weeks
+    create_user_duties(user_dict, roster_id)
 
 def create_user(user):
     """Create user with upsert."""
@@ -654,27 +566,6 @@ def get_gif():
     contents = requests.get(search_url + '?' + params).json()
     url = contents['data'][0]['images']['fixed_height']['url']
     return url
-
-# def check_missed_duties():
-#     print('Running check_missed_duties')
-
-#     now = datetime.datetime.now()
-#     today = datetime.datetime(now.year, now.month, now.day)
-#     window_end = today - datetime.timedelta(days=2)
-
-#     result = Duties.update_many(
-#         {
-#             'isCompleted': False,
-#             'date': { '$lt': window_end }
-#         },
-#         {
-#             '$set': {
-#                 'isMissed': True
-#             }
-#         }
-#     )
-
-#     print('Missed duties: ' + result.raw_result)
 
 def remind():
     # Get reminder window
