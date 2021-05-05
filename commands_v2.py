@@ -72,7 +72,7 @@ def start(update: Update, context: CallbackContext):
 
     message =  fr'Hi {user.mention_markdown_v2()}\!'
 
-    update.message.reply_markdown_v2(message)
+    update.message.reply_markdown_v2(message, quote=False)
 
 def leave(update: Update):
     """Send a message when the command /leave is issued."""
@@ -244,7 +244,8 @@ def create_roster(update: Update, context: CallbackContext) -> int:
 _\(e\.g\. laundry, mopping, dishes\)_'
     update.message.reply_markdown_v2(
         text=message,
-        reply_markup=ForceReply()
+        reply_markup=ForceReply(selective=True),
+        quote=False,
     )
 
     return GET_ROSTER_NAME
@@ -271,13 +272,14 @@ def receive_roster_name(update: Update, context: CallbackContext):
     message = fr'New roster added: *{name}*\
 To join the roster, hit *Join* below\!'
 
-    button_text = fr'Join {name} roster'
+    button_text = fr'Join roster\: {name}'
     callback_data = fr'join.{roster_id}'
     keyboard = [[InlineKeyboardButton(button_text, callback_data=callback_data)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     update.message.reply_markdown_v2(
         text=message,
+        quote=False,
         reply_markup=reply_markup
     )
 
@@ -325,7 +327,8 @@ Send \/join to join the roster\!'
 
     query.message.reply_markdown_v2(
         text=message,
-        reply_markup=reply_markup
+        reply_markup=reply_markup,
+        quote=False,
     )
 
 def add_to_roster(update: Update, context: CallbackContext):
@@ -411,8 +414,8 @@ def show_duties(update: Update, context: CallbackContext):
     # Get date window for duties
     now = datetime.datetime.now()
     today = datetime.datetime(now.year, now.month, now.day)
-    start_of_week = today - datetime.timedelta(days=today.weekday())
-    end_of_week = start_of_week + datetime.timedelta(weeks=1)
+    start_of_week = today - datetime.timedelta(days=today.weekday() + 1)
+    end_of_week = today + datetime.timedelta(days=6)
 
     cursor = Duties.find({
         'roster_id': { '$in': roster_ids },
@@ -434,7 +437,7 @@ def show_duties(update: Update, context: CallbackContext):
                 if week_number is None:
                     week_number = duty['date'].isocalendar()[1]
                 elif duty['date'].isocalendar()[1] > week_number:
-                    message += '\-\n'
+                    # message += '\-\n'
                     week_number = duty['date'].isocalendar()[1]
 
                 date = duty['date'].strftime("%a %d\/%m")
@@ -448,7 +451,7 @@ def show_duties(update: Update, context: CallbackContext):
 
     message = message or "No duties created yet 🤷"
 
-    update.message.reply_markdown_v2(text=message)
+    update.message.reply_markdown_v2(message, quote=False)
 
 def mark_as_done(update: Update):
     """Mark user's duty as done when the command /done is issued."""
