@@ -105,6 +105,7 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
     end_of_cycle = start_of_cycle + datetime.timedelta(weeks=WEEKS_IN_ADVANCE)
 
     roster_id = roster['_id']
+    chat_id = update.effective_chat.id
 
     # Remove future user duties from this roster
     Duties.delete_many(
@@ -139,6 +140,7 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
                     'user': user_dict['id'],
                     'date': date,
                     'roster_id': roster_id,
+                    'chat_id': chat_id,
                     'isCompleted': False,
                     'createdAt': now,
                 }
@@ -400,8 +402,8 @@ def join(update: Update, context: CallbackContext):
 def show_duties(update: Update, context: CallbackContext):
     """Shows chat's roster duties for the week"""
     
+    # Get chat and roster ids
     chat_id = update.effective_chat.id
-
     rosters = Rosters.find({ 'chat_id': chat_id }, projection={ 'name': True })
     rosters = list(rosters)
     roster_ids = list(map(lambda r: r['_id'], rosters))
@@ -451,6 +453,9 @@ def show_duties(update: Update, context: CallbackContext):
 def mark_as_done(update: Update):
     """Mark user's duty as done when the command /done is issued."""
 
+    # Get chat id
+    chat_id = update.effective_chat.id
+
     # Get user
     user = update.effective_user
     user_text = user.mention_markdown_v2()
@@ -461,29 +466,23 @@ def mark_as_done(update: Update):
     window_start = today - datetime.timedelta(days=3)
     window_end = today + datetime.timedelta(days=3)
 
-    # Get mongodb collections
-
     # Find uncompleted duty in date window
-    duty = Duties.find_one({
+    incomplete_duties = Duties.find({
         'user': user.id,
         'isCompleted': False,
         'date': { '$gte': window_start, '$lt': window_end }
     }, sort=[('date', 1)])
+    incomplete_duties = list(incomplete_duties)
 
     duty_done = False
 
-    if duty is None:
+    if not incomplete_duties:
+        # Ask which roster is this. Callback query
         # Check if user duty is on any day
-        user_dict = Users.find_one({ 'id': user.id })
-
-        if 'dutyDay' not in user_dict:
-            Duties.insert_one({
-                'isCompleted': True,
-                'date': today,
-                'user': user.id,
-            })
-            duty_done = True
-        # else: # TODO: Ad-hoc or overwrite duty
+        return
+    elif len(incomplete_duties) > 1:
+        # Ask which roster is this. Callback query
+        return
     else:
         # Update duty as completed
         Duties.update_one(
@@ -495,7 +494,7 @@ def mark_as_done(update: Update):
     if duty_done:
         message = fr'✅ {user_text} just did laundry\! 👏 👏 👏'
     else:
-        message = fr'🧐 No laundry duty scheduled for you today {user_text}\.'
+        message = fr'🧐 No duty scheduled for you {user_text}\.'
 
     update.message.reply_markdown_v2(message, quote=False)
 
@@ -503,6 +502,19 @@ def mark_as_done(update: Update):
         send_gif(update)
 
     return None
+
+def mark_roster_as_done(update: Update):
+    """ Find roster duty and mark it as done """
+    # user_dict = Users.find_one({ 'id': user.id })
+
+    # if 'dutyDay' not in user_dict:
+    #     Duties.insert_one({
+    #         'isCompleted': True,
+    #         'date': today,
+    #         'user': user.id,
+    #     })
+    #     duty_done = True
+    # else: # TODO: Ad-hoc or overwrite duty
 
 def send_gif(update: Update):
     url = get_gif()
