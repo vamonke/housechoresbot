@@ -303,7 +303,7 @@ def main():
 
     dispatcher.add_handler(CommandHandler("start", start))
     # dispatcher.add_handler(CommandHandler("done", lambda update, _ : function_wrapper(mark_as_done, update)))
-    # dispatcher.add_handler(CommandHandler("duties", lambda update, _ : function_wrapper(show_duties, update)))
+    dispatcher.add_handler(CommandHandler("duties", show_duties))
     # dispatcher.add_handler(CommandHandler("schedule", lambda update, _ : function_wrapper(show_schedule, update)))
     # dispatcher.add_handler(CommandHandler("reschedule", lambda update, _ : function_wrapper(reschedule, update)))
     # dispatcher.add_handler(CommandHandler("join", lambda update, _ : function_wrapper(join, update)))

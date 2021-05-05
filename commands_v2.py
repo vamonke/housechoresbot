@@ -397,31 +397,56 @@ def join(update: Update, context: CallbackContext):
     # 3. Display schedules as buttons
     return
 
-def show_duties(update: Update):
-    """Send a message when the command /leave is issued."""
-    message = ""
+def show_duties(update: Update, context: CallbackContext):
+    """Shows chat's roster duties for the week"""
+    
+    chat_id = update.effective_chat.id
 
-    # TODO: Filter to current week
-    cursor = Duties.find({}).sort('date')
+    rosters = Rosters.find({ 'chat_id': chat_id }, projection={ 'name': True })
+    rosters = list(rosters)
+    roster_ids = list(map(lambda r: r['_id'], rosters))
 
-    week_number = None
-    for duty in cursor:
-        user_text = get_name_from_user_id(users, duty['user'])
+    # Get date window for duties
+    now = datetime.datetime.now()
+    today = datetime.datetime(now.year, now.month, now.day)
+    start_of_week = today - datetime.timedelta(days=today.weekday())
+    end_of_week = start_of_week + datetime.timedelta(weeks=1)
 
-        if week_number is None:
-            week_number = duty['date'].isocalendar()[1]
-        elif duty['date'].isocalendar()[1] > week_number:
-            message += '\-\n'
-            week_number = duty['date'].isocalendar()[1]
+    cursor = Duties.find({
+        'roster_id': { '$in': roster_ids },
+        'date': { '$gte': start_of_week, '$lte': end_of_week }
+    }).sort('date')
+    duties = list(cursor)
 
-        date = duty['date'].strftime("%a %d\/%m")
-        message += fr'`{date}\:` {user_text}'
-        if 'isCompleted' in duty and duty['isCompleted']:
-            message += " ✅"
-        message += "\n"
+    message = ''
+
+    for roster in rosters:
+        roster_duties = list(filter(lambda d: (d['roster_id'] == roster['_id']), duties))
+        if roster_duties:
+            roster_name = roster['name']
+            message += fr'*{roster_name}*' + '\n'
+            week_number = None
+            for duty in roster_duties:
+                user_text = get_name_from_user_id(duty['user'])
+
+                if week_number is None:
+                    week_number = duty['date'].isocalendar()[1]
+                elif duty['date'].isocalendar()[1] > week_number:
+                    message += '\-\n'
+                    week_number = duty['date'].isocalendar()[1]
+
+                date = duty['date'].strftime("%a %d\/%m")
+                message += fr'`{date}\:` {user_text}'
+
+                if 'isCompleted' in duty and duty['isCompleted']:
+                    message += " ✅"
+
+                message += "\n"
+            message += "\n"
 
     message = message or "No duties created yet 🤷"
-    return message
+
+    update.message.reply_markdown_v2(text=message)
 
 def mark_as_done(update: Update):
     """Mark user's duty as done when the command /done is issued."""
@@ -559,7 +584,7 @@ def next_duty(update: Update):
     if duty is None:
         return fr'🧐 No more duties this week'
 
-    user_text = get_name_from_user_id(users, duty['user'])
+    user_text = get_name_from_user_id(duty['user'])
     duty_date = duty['date']
 
     if duty_date == today:
@@ -605,7 +630,7 @@ def remind():
         logger.info('No pending laundry duties between yesterday and tomorrow')
         return None
 
-    user_text = get_name_from_user_id(users, duty['user'])
+    user_text = get_name_from_user_id(duty['user'])
     duty_date = duty['date']
 
     if duty_date < today:

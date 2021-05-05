@@ -7,6 +7,8 @@ import datetime
 from bson.objectid import ObjectId
 from urllib.parse import urlencode
 
+from telegram import User
+
 from mongo import (
     # Chats,
     # Schedules,
