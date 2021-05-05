@@ -46,7 +46,7 @@ user_properties = [
 ]
 
 LIM_FAMILY_USER_IDS = [
-    265435469, # VAMONKE
+    # 265435469, # VAMONKE
     808439673,
     278239097,
     59546722,
@@ -163,6 +163,10 @@ def webhook(event, context):
 
         if update.callback_query is None and update.message is None:
             logger.warn('No callback_query or message')
+            return OK_RESPONSE
+
+        if update.message is not None and update.message.text is None:
+            logger.info('Nothing to do here')
             return OK_RESPONSE
 
         # Check for whitelisted IDs
