@@ -92,10 +92,10 @@ def leave(update: Update):
 
     return fr'{user.mention_markdown_v2()} left'
 
-def create_user_duties(user_dict, roster_id):
+def create_user_duties(user_dict: dict, roster: dict, update: Update):
     """Create duties for a user"""
 
-    if user_dict is None or 'dutyDay' not in user_dict:
+    if user_dict is None or roster is None or 'dutyDay' not in user_dict:
         return
 
     # Get window to create duties
@@ -103,6 +103,8 @@ def create_user_duties(user_dict, roster_id):
     today = datetime.datetime(now.year, now.month, now.day)
     start_of_cycle = today - datetime.timedelta(days=today.weekday())
     end_of_cycle = start_of_cycle + datetime.timedelta(weeks=WEEKS_IN_ADVANCE)
+
+    roster_id = roster['_id']
 
     # Remove future user duties from this roster
     Duties.delete_many(
@@ -150,7 +152,7 @@ def create_user_duties(user_dict, roster_id):
     result = Duties.bulk_write(requests)
     logger.info('result', result.bulk_api_result)
 
-    # user_next_duty(user_dict, update)
+    user_next_duty(user_dict, roster, update)
 
 # def create_duties():
 #     """Create duties when the command /createduties is issued."""
@@ -298,7 +300,7 @@ def join_roster(update: Update, context: CallbackContext):
 
     if query.message is None:
         message = fr'New roster added: *{name}*\
-Send /join to join the roster\!'
+Send \/join to join the roster\!'
         query.edit_message_text(text=message)
         return
 
@@ -362,7 +364,7 @@ def add_to_roster(update: Update, context: CallbackContext):
             },
         )
 
-    print(result.raw_result)
+    logger.info(result.raw_result)
 
     day = week_days[duty_day]
     roster_name = roster['name']
@@ -371,7 +373,11 @@ def add_to_roster(update: Update, context: CallbackContext):
     message = f"{user_text} has chosen to do *{roster_name}* on *{day}* 👌"
     query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
 
-    create_user_duties(user_dict, roster_id)
+    create_user_duties(
+        user_dict=user_dict,
+        roster=roster,
+        update=update
+    )
 
 def create_user(user):
     """Create user with upsert."""
@@ -495,36 +501,48 @@ def add_to_waitlist(update):
     message = fr"👋 Hello {user_text}\! House Chores Bot is currently in closed beta\. Will let you know when it\'s ready for you 😃"
     return message
 
-# def user_next_duty(user_dict, update):
-#     """Get user's next duty date"""
-    
-#     user_id = user_dict['id']
-#     now = datetime.datetime.now()
-#     today = datetime.datetime(now.year, now.month, now.day)
+def user_next_duty(user_dict: dict, roster: dict, update: Update):
+    """Get user's next duty date"""
 
-#     # Find next uncompleted duty
-#     duty = Duties.find_one({
-#         'user': user_id,
-#         'isCompleted': False,
-#         'date': { '$gte': today }
-#     }, sort=[('date', 1)])
+    if (
+        user_dict is None or \
+        roster is None or \
+        update.callback_query is None or \
+        update.callback_query.message is None
+    ):
+        return
 
-#     if duty is None:
-#         return None
+    user_id = user_dict['id']
+    roster_id = roster['_id']
+    now = datetime.datetime.now()
+    today = datetime.datetime(now.year, now.month, now.day)
 
-#     duty_date = duty['date']
-#     user = User(**user_dict)
-#     user_text = user.mention_markdown_v2()
+    # Find next uncompleted duty
+    duty = Duties.find_one({
+        'user': user_id,
+        'isCompleted': False,
+        'roster_id': roster_id,
+        'date': { '$gte': today }
+    }, sort=[('date', 1)])
 
-#     if duty_date == today:
-#         message = fr'📅 {user_text}: Your laundry duty is today'
-#     elif duty_date == today + datetime.timedelta(days=1):
-#         message = fr'📅 {user_text}: Your next laundry duty is tomorrow'
-#     else:
-#         date = duty['date'].strftime("%A %-d %b")
-#         message = fr'📅 {user_text}: Your next laundry duty is on {date}'
+    if duty is None:
+        return
 
-#     update.callback_query.message.reply_markdown_v2(message, quote=False)
+    duty_date = duty['date']
+    user = User(**user_dict)
+    user_text = user.mention_markdown_v2()
+    roster_name = roster['name']
+
+    if duty_date == today:
+        message = fr'📅 {user_text} you have a duty today: *{roster_name}*\. Send \/done once you\'ve completed your chore 👍'
+        update.callback_query.message.reply_markdown_v2(message, quote=False)
+    # elif duty_date == today + datetime.timedelta(days=1):
+    #     message = fr'📅 {user_text}: Your next *{roster_name}* duty is tomorrow'
+    # else:
+    #     date = duty['date'].strftime("%A %-d %b")
+    #     message = fr'📅 {user_text}: Your next laundry duty is on {date}'
+
+    # update.callback_query.message.reply_markdown_v2(message, quote=False)
 
 def next_duty(update: Update):
     """Get next duty date and user when the command /nextduty is issued."""
