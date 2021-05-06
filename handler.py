@@ -46,6 +46,7 @@ from commands_v2 import (
     receive_roster_name,
     join_roster,
     add_to_roster,
+    mark_roster_as_done,
     cancel,
     GET_ROSTER_NAME,
 )
@@ -321,6 +322,7 @@ def main():
 
     updater.dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern='^join\.'))
     updater.dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern='^addtoroster\.'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern='^rosterdone\.'))
 
     updater.start_polling()
     updater.idle()

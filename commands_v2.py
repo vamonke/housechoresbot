@@ -11,6 +11,7 @@ from telegram import (
     Update,
     Bot,
     User,
+    Message,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
     KeyboardButton,
@@ -339,7 +340,8 @@ def add_to_roster(update: Update, context: CallbackContext):
     data = update.callback_query.data
     data = data.replace('addtoroster.', '')
     roster_id, duty_day = data.split(".")
-    roster = Rosters.find_one(ObjectId(roster_id))
+    roster_id = ObjectId(roster_id)
+    roster = Rosters.find_one(roster_id)
 
     if roster is None:
         message = 'Oops! This roster has been removed.'
@@ -354,7 +356,7 @@ def add_to_roster(update: Update, context: CallbackContext):
     if any(u['id'] == user.id for u in roster['schedule']):
         # Update existing user in schedule
         result = Rosters.update_one(
-            { '_id': ObjectId(roster_id) },
+            { '_id': roster_id },
             { '$set':
                 { "schedule.$[user]": user_dict },
             },
@@ -363,7 +365,7 @@ def add_to_roster(update: Update, context: CallbackContext):
     else:
         # Add new user to schedule
         result = Rosters.update_one(
-            { '_id': ObjectId(roster_id) },
+            { '_id': roster_id },
             { '$addToSet':
                 { "schedule": user_dict },
             },
@@ -453,7 +455,7 @@ def show_duties(update: Update, context: CallbackContext):
 
     update.message.reply_markdown_v2(message, quote=False)
 
-def mark_as_done(update: Update):
+def mark_as_done(update: Update, context: CallbackContext):
     """Mark user's duty as done when the command /done is issued."""
 
     # Get chat id
@@ -466,62 +468,146 @@ def mark_as_done(update: Update):
     # Get date window for duty
     now = datetime.datetime.now()
     today = datetime.datetime(now.year, now.month, now.day)
-    window_start = today - datetime.timedelta(days=3)
-    window_end = today + datetime.timedelta(days=3)
+    window_start = today - datetime.timedelta(days=2)
+    window_end = today + datetime.timedelta(days=1)
 
     # Find uncompleted duty in date window
     incomplete_duties = Duties.find({
+        'chat_id': chat_id,
         'user': user.id,
         'isCompleted': False,
         'date': { '$gte': window_start, '$lt': window_end }
     }, sort=[('date', 1)])
     incomplete_duties = list(incomplete_duties)
 
-    duty_done = False
-
     if not incomplete_duties:
-        # Ask which roster is this. Callback query
-        # Check if user duty is on any day
+        ask_which_roster_done(update)
         return
     elif len(incomplete_duties) > 1:
-        # Ask which roster is this. Callback query
+        ask_which_roster_done(update)
         return
-    else:
-        # Update duty as completed
-        Duties.update_one(
-            { '_id': duty['_id'] },
-            { '$set': { 'isCompleted': True, 'isMissed': False } }
-        )
-        duty_done = True
+    
+    # Update duty as completed
+    duty = incomplete_duties[0]
+    duty_id = duty['_id']
+    Duties.update_one(
+        { '_id': duty_id },
+        { '$set': { 'isCompleted': True, 'isMissed': False } }
+    )
 
-    if duty_done:
-        message = fr'✅ {user_text} just did laundry\! 👏 👏 👏'
-    else:
-        message = fr'🧐 No duty scheduled for you {user_text}\.'
+    message = fr'✅ {user_text} just completed a duty\! 👏 👏 👏'
+
+    # Find roster
+    roster = Rosters.find_one(duty['roster_id'])
+    if roster is not None:
+        roster_name = roster['name']
+        message = fr'✅ {user_text} just completed *{roster_name}*\! 👏 👏 👏'
 
     update.message.reply_markdown_v2(message, quote=False)
+    send_gif(update.message)
 
-    if duty_done:
-        send_gif(update)
+def roster_to_button(roster):
+    button_text = roster['name']
+    roster_id = roster['_id']
+    callback_data = fr'rosterdone.{roster_id}'
+    return [InlineKeyboardButton(button_text, callback_data=callback_data)]
 
-    return None
+def ask_which_roster_done(update: Update):
+    """ Get rosters and send to user to select """
 
-def mark_roster_as_done(update: Update):
+    # Get chat and roster ids
+    chat_id = update.effective_chat.id
+    rosters = Rosters.find({ 'chat_id': chat_id }, projection={ 'name': True })
+    rosters = list(rosters)
+    roster_ids = list(map(lambda r: r['_id'], rosters))
+
+    # Get user
+    user = update.effective_user
+    user_text = user.mention_markdown_v2()
+
+    message = fr'\/done: {user_text} which chore did you complete\?'
+    keyboard = list(map(roster_to_button, rosters))
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_markdown_v2(
+        text=message,
+        reply_markup=reply_markup,
+        quote=False,
+    )
+
+def mark_roster_as_done(update: Update, _: CallbackContext):
     """ Find roster duty and mark it as done """
-    # user_dict = Users.find_one({ 'id': user.id })
+    query = update.callback_query
+    query.answer()
 
-    # if 'dutyDay' not in user_dict:
-    #     Duties.insert_one({
-    #         'isCompleted': True,
-    #         'date': today,
-    #         'user': user.id,
-    #     })
-    #     duty_done = True
-    # else: # TODO: Ad-hoc or overwrite duty
+    # Get chat id
+    chat_id = update.effective_chat.id
 
-def send_gif(update: Update):
+    # Get roster
+    data = query.data
+    roster_id = data.replace('rosterdone.', '')
+    roster_id = ObjectId(roster_id)
+    roster = Rosters.find_one(roster_id)
+    roster_name = roster['name']
+
+    # Get user
+    user = update.effective_user
+    user_text = user.mention_markdown_v2()
+
+    # Get date window for duty
+    now = datetime.datetime.now()
+    today = datetime.datetime(now.year, now.month, now.day)
+    window_start = today - datetime.timedelta(days=2)
+    window_end = today + datetime.timedelta(days=1)
+
+    # Find uncompleted duty in date window
+    incomplete_duty = Duties.find_one({
+        'roster_id': roster_id,
+        'chat_id': chat_id,
+        'user': user.id,
+        'isCompleted': False,
+        'date': { '$gte': window_start, '$lt': window_end }
+    }, sort=[('date', 1)])
+
+    if incomplete_duty:
+        # Update duty as completed
+        duty_id = incomplete_duty['_id']
+        Duties.update_one(
+            { '_id': duty_id },
+            { '$set': { 'isCompleted': True, 'isMissed': False } }
+        )
+    else:
+        # Insert completed duty
+        Duties.find_one_and_update(
+            {
+                'user': user.id,
+                'chat_id': chat_id,
+                'roster_id': roster_id,
+                'date': today,
+            },
+            { '$setOnInsert':
+                {
+                    'chat_id': chat_id,
+                    'roster_id': roster_id,
+                    'user': user.id,
+                    'isCompleted': True,
+                    'date': today,
+                    'isAdhoc': True,
+                    'createdAt': now,
+                }
+            },
+            upsert=True,
+        )
+
+    # message = fr'🧐 No duty scheduled for you {user_text}\.'
+    message = fr'✅ {user_text} just completed *{roster_name}*\! 👏 👏 👏'
+    query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
+    
+    send_gif(query.message)
+
+def send_gif(message: Message):
     url = get_gif()
-    update.message.reply_animation(animation=url, quote=False)
+    message.reply_animation(animation=url, quote=False)
 
 def add_to_waitlist(update):
     user = update.effective_user
