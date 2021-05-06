@@ -238,11 +238,12 @@ def show_schedule(update: Update):
 def create_roster(update: Update, context: CallbackContext) -> int:
     """Ask for roster name when the command /createroster is issued."""
 
-    if context and context.args:
-        name = ' '.join(context.args)
+    user = update.effective_user
+    user_text = user.mention_markdown_v2()
 
-    message = fr'\/createroster: What\'s the name of the chore\? \
-_\(e\.g\. laundry, mopping, dishes\)_'
+    # message = 'What\'s the name of the chore\?\n_\(e\.g\. laundry, mopping, dishes\)_'
+    message = user_text + ' what\'s the name of the chore\?\n_\(e\.g\. laundry, mopping, dishes\)_'
+
     update.message.reply_markdown_v2(
         text=message,
         reply_markup=ForceReply(selective=True),
@@ -270,11 +271,10 @@ def receive_roster_name(update: Update, context: CallbackContext):
     )
     roster_id = result.inserted_id
 
-    message = fr'New roster added: *{name}*\
-To join the roster, hit *Join* below\!'
+    message = fr'➕ New roster added: *{name}*' + '\n_Hit the button below to join the roster_'
 
-    button_text = fr'Join roster\: {name}'
-    callback_data = fr'join.{roster_id}'
+    button_text = fr'Join roster: {name}'
+    callback_data = fr'joinnewroster.{roster_id}'
     keyboard = [[InlineKeyboardButton(button_text, callback_data=callback_data)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -295,7 +295,7 @@ def join_roster(update: Update, context: CallbackContext):
     query.answer()
 
     data = update.callback_query.data
-    roster_id = data.replace('join.', '')
+    join_type, roster_id = data.split(".")
     roster = Rosters.find_one(ObjectId(roster_id))
 
     if roster is None:
@@ -303,9 +303,13 @@ def join_roster(update: Update, context: CallbackContext):
         query.edit_message_text(text=message)
         return
 
+    is_new_roster = join_type == 'joinnewroster'
+
     if query.message is None:
-        message = fr'New roster added: *{name}*\
-Send \/join to join the roster\!'
+        if is_new_roster:
+            message = fr'New roster added: *{name}*' + '\nSend \/join to join the roster\!'
+        else:
+            message = fr'Oops\, something went wrong\!'
         query.edit_message_text(text=message)
         return
 
@@ -326,11 +330,18 @@ Send \/join to join the roster\!'
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    query.message.reply_markdown_v2(
-        text=message,
-        reply_markup=reply_markup,
-        quote=False,
-    )
+    if is_new_roster:
+        query.message.reply_markdown_v2(
+            text=message,
+            reply_markup=reply_markup,
+            quote=False,
+        )
+    else:
+        query.edit_message_text(
+            text=message,
+            reply_markup=reply_markup,
+            parse_mode=constants.PARSEMODE_MARKDOWN_V2,
+        )
 
 def add_to_roster(update: Update, context: CallbackContext):
     """Add user to duty roster"""
@@ -397,12 +408,27 @@ def create_user(user):
         upsert=True,
     )
 
-def join(update: Update, context: CallbackContext):
-    """ Select which roster to join """
-    # 1. Get chat_id
-    # 2. Get schedules
-    # 3. Display schedules as buttons
-    return
+def join_roster_select(update: Update, context: CallbackContext):
+    """ Let user select which roster to join """
+    # Get chat and roster ids
+    chat_id = update.effective_chat.id
+    rosters = Rosters.find({ 'chat_id': chat_id }, projection={ 'name': True })
+    rosters = list(rosters)
+    roster_ids = list(map(lambda r: r['_id'], rosters))
+
+    # Get user
+    user = update.effective_user
+    user_text = user.mention_markdown_v2()
+
+    message = fr'\/join: {user_text} which roster do you want to join\?'
+    keyboard = [roster_to_button(r, 'join') for r in rosters]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_markdown_v2(
+        text=message,
+        reply_markup=reply_markup,
+        quote=False,
+    )
 
 def show_duties(update: Update, context: CallbackContext):
     """Shows chat's roster duties for the week"""
@@ -506,10 +532,10 @@ def mark_as_done(update: Update, context: CallbackContext):
     update.message.reply_markdown_v2(message, quote=False)
     send_gif(update.message)
 
-def roster_to_button(roster):
+def roster_to_button(roster, callback_text):
     button_text = roster['name']
     roster_id = roster['_id']
-    callback_data = fr'rosterdone.{roster_id}'
+    callback_data = fr'{callback_text}.{roster_id}'
     return [InlineKeyboardButton(button_text, callback_data=callback_data)]
 
 def ask_which_roster_done(update: Update):
@@ -526,7 +552,7 @@ def ask_which_roster_done(update: Update):
     user_text = user.mention_markdown_v2()
 
     message = fr'\/done: {user_text} which chore did you complete\?'
-    keyboard = list(map(roster_to_button, rosters))
+    keyboard = [roster_to_button(r, 'rosterdone') for r in rosters]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     update.message.reply_markdown_v2(

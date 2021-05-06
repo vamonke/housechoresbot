@@ -29,7 +29,7 @@ from telegram.ext import (
 
 from commands_v2 import (
     start,
-    join,
+    # join,
     # leave,
     show_duties,
     # create_duties,
@@ -44,6 +44,7 @@ from commands_v2 import (
     add_to_waitlist,
     create_roster,
     receive_roster_name,
+    join_roster_select,
     join_roster,
     add_to_roster,
     mark_roster_as_done,
@@ -305,9 +306,9 @@ def main():
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("done", mark_as_done))
     dispatcher.add_handler(CommandHandler("duties", show_duties))
+    dispatcher.add_handler(CommandHandler("join", join_roster_select))
     # dispatcher.add_handler(CommandHandler("schedule", lambda update, _ : function_wrapper(show_schedule, update)))
     # dispatcher.add_handler(CommandHandler("reschedule", lambda update, _ : function_wrapper(reschedule, update)))
-    # dispatcher.add_handler(CommandHandler("join", lambda update, _ : function_wrapper(join, update)))
     # dispatcher.add_handler(CommandHandler("leave", lambda update, _ : function_wrapper(leave, update)))
     # dispatcher.add_handler(CommandHandler("nextduty", lambda update, _ : function_wrapper(next_duty, update)))
 
@@ -320,7 +321,7 @@ def main():
     )
     dispatcher.add_handler(conv_handler)
 
-    updater.dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern='^join\.'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern='^(joinnewroster|join)\.'))
     updater.dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern='^addtoroster\.'))
     updater.dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern='^rosterdone\.'))
 
