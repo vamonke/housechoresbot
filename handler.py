@@ -51,6 +51,8 @@ from commands_v2 import (
     add_to_roster,
     mark_roster_as_done,
     show_rosters,
+    leave_roster_select,
+    leave_roster,
     GET_ROSTER_NAME,
 )
 
@@ -310,8 +312,8 @@ def main():
     dispatcher.add_handler(CommandHandler("duties", show_duties))
     dispatcher.add_handler(CommandHandler("join", join_roster_select))
     dispatcher.add_handler(CommandHandler("rosters", show_rosters))
+    dispatcher.add_handler(CommandHandler("leave", leave_roster_select))
     # dispatcher.add_handler(CommandHandler("reschedule", lambda update, _ : function_wrapper(reschedule, update)))
-    # dispatcher.add_handler(CommandHandler("leave", lambda update, _ : function_wrapper(leave, update)))
     # dispatcher.add_handler(CommandHandler("nextduty", lambda update, _ : function_wrapper(next_duty, update)))
 
     conv_handler = ConversationHandler(
@@ -326,6 +328,7 @@ def main():
     updater.dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern='^(joinnewroster|join)\.'))
     updater.dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern='^addtoroster\.'))
     updater.dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern='^rosterdone\.'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern='^leave\.'))
 
     updater.start_polling()
     updater.idle()

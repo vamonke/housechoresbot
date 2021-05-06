@@ -75,23 +75,18 @@ def start(update: Update, context: CallbackContext):
 
     update.message.reply_markdown_v2(message, quote=False)
 
-def leave(update: Update):
-    """Send a message when the command /leave is issued."""
-    user = update.effective_user
-    user_dict = get_user_dict_from_user(user)
-    user_dict['modifiedAt'] = datetime.datetime.now()
-
-    users = setup_mongodb()["users"]
-    result = Users.find_one_and_update(
-        { 'id': user_dict['id'] },
-        { '$set': user_dict },
-        upsert=True,
+def delete_user_duties(user_id: int, roster_id: ObjectId):
+    """ Remove future user duties from this roster """
+    now = datetime.datetime.now()
+    today = datetime.datetime(now.year, now.month, now.day)
+    Duties.delete_many(
+        {
+            'user': user_id,
+            'roster_id': roster_id,
+            'isCompleted': False,
+            'date': { '$gte': today },
+        }
     )
-
-    if result is None or result['isRemoved']:
-        return fr'{user.mention_markdown_v2()} is already not in the duty roster'
-
-    return fr'{user.mention_markdown_v2()} left'
 
 def create_user_duties(user_dict: dict, roster: dict, update: Update):
     """Create duties for a user"""
@@ -106,17 +101,11 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
     end_of_cycle = start_of_cycle + datetime.timedelta(weeks=WEEKS_IN_ADVANCE)
 
     roster_id = roster['_id']
+    user_id = user_dict['id']
     chat_id = update.effective_chat.id
 
     # Remove future user duties from this roster
-    Duties.delete_many(
-        {
-            'user': user_dict['id'],
-            'roster_id': roster_id,
-            'isCompleted': False,
-            'date': { '$gte': today },
-        }
-    )
+    delete_user_duties(user_id, roster_id)
 
     # Get mongodb inserts
     requests = []
@@ -131,14 +120,14 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
         # logger.info('duty', duty)
         request = pymongo.UpdateOne(
             {
-                'user': user_dict['id'],
+                'user': user_id,
                 'date': date,
                 'roster_id': roster_id,
                 'isCompleted': False,
             },
             {
                 '$setOnInsert': {
-                    'user': user_dict['id'],
+                    'user': user_id,
                     'date': date,
                     'roster_id': roster_id,
                     'chat_id': chat_id,
@@ -307,6 +296,7 @@ def join_roster(update: Update, context: CallbackContext):
 
     is_new_roster = join_type == 'joinnewroster'
 
+    # IDK when this happens but just in case lol
     if query.message is None:
         if is_new_roster:
             message = fr'New roster added: *{name}*' + '\nSend \/join to join the roster\!'
@@ -640,6 +630,84 @@ def mark_roster_as_done(update: Update, _: CallbackContext):
 def send_gif(message: Message):
     url = get_gif()
     message.reply_animation(animation=url, quote=False)
+
+def leave_roster(update: Update, context: CallbackContext):
+    """Remove user from roster and remove duties"""
+    user = update.effective_user
+
+    query = update.callback_query
+    query.answer()
+
+    data = update.callback_query.data
+    _, roster_id = data.split(".")
+    roster_id = ObjectId(roster_id)
+    roster = Rosters.find_one(roster_id)
+
+    if roster is None:
+        message = 'Oops! This roster has been removed.'
+        query.edit_message_text(text=message)
+        return
+
+    user = update.effective_user
+    user_dict = get_user_dict_from_user(user)
+    user_id = user_dict['id']
+
+    if any(u['id'] == user.id for u in roster['schedule']):
+        # Remove existing user from schedule
+        Rosters.update_one(
+            { '_id': roster_id },
+            { '$pull':
+                { 'schedule': { 'id': user_id } }
+            },
+        )
+
+    # Remove user duties
+    delete_user_duties(user_id=user_id, roster_id=roster_id)
+
+    roster_name = roster['name']
+    user_text = user.mention_markdown_v2()
+    message = f"👋 {user_text} has left roster: *{roster_name}*"
+    
+    query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
+    
+def leave_roster_select(update: Update, context: CallbackContext):
+    """Let user select which roster to leave"""
+    # Get user
+    user = update.effective_user
+    user_text = user.mention_markdown_v2()
+    user_id = user.id
+
+    # Get chat id
+    chat_id = update.effective_chat.id
+
+    rosters = Rosters.find(
+        {
+            'chat_id': chat_id,
+            'schedule': {
+                '$elemMatch': {
+                    'id': user_id
+                } 
+            }
+        },
+        projection={ 'name': True }
+    )
+    rosters = list(rosters)
+    roster_ids = list(map(lambda r: r['_id'], rosters))
+
+    if not rosters:
+        message = fr'{user_text} you are not in any rosters 🧐'
+        update.message.reply_markdown_v2(message, quote=False)
+        return
+
+    message = fr'\/leave: {user_text} which roster do you want to leave\?'
+    keyboard = [roster_to_button(r, 'leave') for r in rosters]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_markdown_v2(
+        text=message,
+        reply_markup=reply_markup,
+        quote=False,
+    )
 
 def add_to_waitlist(update):
     user = update.effective_user
