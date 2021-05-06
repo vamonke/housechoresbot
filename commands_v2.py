@@ -443,7 +443,8 @@ def show_duties(update: Update, context: CallbackContext):
     now = datetime.datetime.now()
     today = datetime.datetime(now.year, now.month, now.day)
     start_of_week = today - datetime.timedelta(days=today.weekday() + 1)
-    end_of_week = today + datetime.timedelta(days=6)
+    end_of_week = start_of_week + datetime.timedelta(weeks=1)
+    # end_of_week = today + datetime.timedelta(days=6)
 
     cursor = Duties.find({
         'roster_id': { '$in': roster_ids },
@@ -477,7 +478,10 @@ def show_duties(update: Update, context: CallbackContext):
                 message += "\n"
             message += "\n"
 
-    message = message or "No duties created yet 🤷"
+    if message:
+        message = 'This week\'s duties:\n' + message
+    else:
+        message = "No duties this week 🤷"
 
     update.message.reply_markdown_v2(message, quote=False)
 
