@@ -200,40 +200,42 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
 
 #     # return message
 
-def show_schedule(update: Update):
-    """Send a message when the command /showschedule is issued."""
+def show_rosters(update: Update, context: CallbackContext):
+    """Shows rosters in chat"""
 
-    message = ""
+    # Get chat and roster ids
+    chat_id = update.effective_chat.id
+    rosters = Rosters.find({ 'chat_id': chat_id })
+    rosters = list(rosters)
 
-    schedule = Schedules.find_one()
+    if not rosters:
+        message = "🤷 No rosters found\. Send \/createreoster to create a roster\."
+        update.message.reply_markdown_v2(message, quote=False)
+        return
 
-    if schedule is None:
-        message += fr"No schedule found" + "\n\n"
-    else:
-        schedule_name = schedule['name']
-        message += fr"*{schedule_name}*" + "\n\n"
+    # breakpoint()
+    message = ''
 
-    days = ['' for _ in range(7)]
-    anyday = None
+    for roster in rosters:
+        roster_name = roster['name']
+        message += fr'*{roster_name}*' + '\n'
 
-    cursor = Users.find({ 'isRemoved': False }).sort('dutyDay')
-    for user_dict in cursor:
-        user = User(**user_dict)
-        user_text = user.mention_markdown_v2()
-
-        if 'dutyDay' in user_dict:
-            day = int(user_dict['dutyDay'])
-            days[day] = user_text
+        roster_users = roster['schedule']
+        if not roster_users:
+            message += fr'\(Roster is empty\)' + '\n'
         else:
-            anyday = user_text
+            for user_dict in roster_users:
+                user = User(**user_dict)
+                user_text = user.mention_markdown_v2()
+                duty_day = user_dict['dutyDay']
+                day = week_days_short[duty_day]
+                message += fr'`{day}\:` {user_text}'
 
-    for index, person in enumerate(days):
-        message += fr"`{week_days_short[index]}`\: {person}" + "\n"
+                message += "\n"
+        
+        message += "\n"
 
-    if anyday is not None:
-        message += "\n" + fr"`Any`\: {anyday}"
-
-    return message
+    update.message.reply_markdown_v2(message, quote=False)
 
 def create_roster(update: Update, context: CallbackContext) -> int:
     """Ask for roster name when the command /createroster is issued."""
@@ -481,7 +483,7 @@ def show_duties(update: Update, context: CallbackContext):
     if message:
         message = 'This week\'s duties:\n' + message
     else:
-        message = "No duties this week 🤷"
+        message = "🤷 No duties this week"
 
     update.message.reply_markdown_v2(message, quote=False)
 
