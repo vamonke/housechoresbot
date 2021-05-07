@@ -124,22 +124,17 @@ def webhook(event, context):
 
     logger.info('Event: {}'.format(event))
 
-    print(get_whitelisted_users())
-
     if event.get('httpMethod') == 'POST' and event.get('body'): 
         logger.info('Message received')
-        
-        # body = json.loads(event.get('body'))
-        body = {'update_id': 136580210, 'message': {'message_id': 614, 'from': {'id': 265435469, 'is_bot': False, 'first_name': 'Varick', 'last_name': 'Lim', 'username': 'vamonke', 'language_code': 'en'}, 'chat': {'id': 265435469, 'first_name': 'Varick', 'last_name': 'Lim', 'username': 'vamonke', 'type': 'private'}, 'date': 1620406441, 'text': '/start', 'entities': [{'offset': 0, 'length': 6, 'type': 'bot_command'}]}}
 
+        # Get event body
+        body = json.loads(event.get('body'))
         logger.info('Body: {}'.format(body))
         
         # Create bot and dispatcher instances
         bot = configure_telegram()
         dispatcher = Dispatcher(bot, None, workers=0)
-        
-        ##### Register handlers here #####
-        dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
+        add_handlers(dispatcher)
         
         update = Update.de_json(body, bot)
         dispatcher.process_update(update)
@@ -163,11 +158,7 @@ def set_webhook(event, context):
 
     return ERROR_RESPONSE
 
-def main():
-    TOKEN = TEST_TELEGRAM_TOKEN if IS_DEV else TELEGRAM_TOKEN
-    updater = Updater(TOKEN)
-    dispatcher = updater.dispatcher
-
+def add_handlers(dispatcher):
     dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
     dispatcher.add_handler(CommandHandler("done", check_whitelist(mark_as_done)))
     dispatcher.add_handler(CommandHandler("duties", check_whitelist(show_duties)))
@@ -193,23 +184,15 @@ def main():
     dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern='^leave\.'))
 
     dispatcher.add_handler(CommandHandler("welcome", whitelist_user))
-    # dispatcher.add_handler(MessageHandler(blacklisted_filter, send_beta_v2))    
+    # dispatcher.add_handler(MessageHandler(blacklisted_filter, send_beta_v2))
 
+def main():
+    TOKEN = TEST_TELEGRAM_TOKEN if IS_DEV else TELEGRAM_TOKEN
+    updater = Updater(TOKEN)
+    dispatcher = updater.dispatcher
+    add_handlers(dispatcher)
     updater.start_polling()
     updater.idle()
-
-def main_dev():
-    body = {'update_id': 136580210, 'message': {'message_id': 614, 'from': {'id': 265435469, 'is_bot': False, 'first_name': 'Varick', 'last_name': 'Lim', 'username': 'vamonke', 'language_code': 'en'}, 'chat': {'id': 265435469, 'first_name': 'Varick', 'last_name': 'Lim', 'username': 'vamonke', 'type': 'private'}, 'date': 1620406441, 'text': '/start', 'entities': [{'offset': 0, 'length': 6, 'type': 'bot_command'}]}}
-
-    # Create bot, update queue and dispatcher instances
-    bot = configure_telegram()
-    dispatcher = Dispatcher(bot, None, workers=0)
-    
-    ##### Register handlers here #####
-    dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
-    
-    update = Update.de_json(body, bot)
-    dispatcher.process_update(update)
 
 # if __name__ == '__main__':
 #     if IS_DEV:
