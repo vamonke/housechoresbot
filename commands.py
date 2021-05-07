@@ -145,7 +145,7 @@ def create_user_duties(user_dict, update):
     now = datetime.datetime.now()
     today = datetime.datetime(now.year, now.month, now.day)
     start_of_cycle = today - datetime.timedelta(days=today.weekday())
-    end_of_cycle = start_of_cycle + datetime.timedelta(weeks=2)
+    end_of_cycle = start_of_cycle + datetime.timedelta(weeks=8)
 
     # Get mongodb inserts
     requests = []
