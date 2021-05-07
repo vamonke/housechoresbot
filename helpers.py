@@ -42,7 +42,7 @@ chat_properties = [
 
 VAMONKE_ID = 265435469
 
-TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN') or '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
+TELEGRAM_TOKEN = '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
 TEST_TELEGRAM_TOKEN = '1798724954:AAGuKOTuVWX8qfuRLUx1EU82Di9czAR6kFs'
 
 ENVIRONMENT = os.environ.get('ENVIRONMENT')
@@ -91,7 +91,7 @@ def configure_telegram():
     Configures the bot with a Telegram Token.
     Returns a bot instance.
     """
-    TOKEN = TEST_TELEGRAM_TOKEN if IS_DEV else TELEGRAM_TOKEN
+    TOKEN = TELEGRAM_TOKEN
     if not TOKEN:
         logger.error('The TELEGRAM_TOKEN must be set')
         raise NotImplementedError

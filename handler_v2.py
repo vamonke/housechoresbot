@@ -85,7 +85,7 @@ ERROR_RESPONSE = {
 
 logger = logging.getLogger(__name__)
 
-TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN') or '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
+TELEGRAM_TOKEN = '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
 TEST_TELEGRAM_TOKEN = '1798724954:AAGuKOTuVWX8qfuRLUx1EU82Di9czAR6kFs'
 
 ENVIRONMENT = os.environ.get('ENVIRONMENT')
@@ -128,6 +128,10 @@ def webhook(event, context):
         
         update = Update.de_json(body, bot)
         dispatcher.process_update(update)
+
+        return OK_RESPONSE
+
+    return ERROR_RESPONSE
 
 def set_webhook(event, context):
     """
@@ -200,7 +204,7 @@ def dev():
     update = Update.de_json(body, bot)
     dispatcher.process_update(update)
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+    # main()
     # dev()
     # routine(None, None)
