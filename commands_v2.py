@@ -43,6 +43,7 @@ from helpers import (
     get_name_from_user_id,
     get_user_dict_from_user,
     get_chat_dict_from_chat,
+    get_is_whitelisted,
 )
 
 from logger import logger
@@ -78,8 +79,17 @@ def start(update: Update, context: CallbackContext):
     message =  fr'Hi {user_text}\! House Chores Bot helps track household chores\. To begin\, send \/createroster\.' # For more info\, send \/help\.
     update.message.reply_markdown_v2(message, quote=False)
 
+def check_whitelist(fn):
+    def wrapper(update: Update, context: CallbackContext):        
+        is_whitelisted = get_is_whitelisted(update)
+        if is_whitelisted:
+            return fn(update, context)
+        return send_beta_v2(update, context)
+
+    return wrapper
+
 def whitelist_user(update: Update, context: CallbackContext):
-    """ Create chat """
+    """ Update chat and user """
     user = update.effective_user
     chat = update.effective_chat
     
@@ -94,7 +104,16 @@ def whitelist_user(update: Update, context: CallbackContext):
         { '$set': chat_dict },
         upsert=True
     )
-    create_user(user)
+
+    user_dict = get_user_dict_from_user(user)
+    user_dict['whitelistedAt'] = now
+    user_dict['isWhitelisted'] = True
+
+    Users.find_one_and_update(
+        { 'id': user_dict['id'] },
+        { '$set': user_dict },
+        upsert=True,
+    )
 
     message =  fr'🥳 You can now use House Chores Bot\! To begin\, send \/createroster\.'
     update.message.reply_markdown_v2(message, quote=False)
@@ -274,23 +293,26 @@ def receive_roster_name(update: Update, context: CallbackContext):
     name = update.message.text
     user = update.effective_user
 
-    result = Rosters.update_one(
+    roster = {
+        'name': name,
+        'chat_id': chat_id,
+        'createdAt': datetime.datetime.now(),
+        'interval': 'week',
+        'createdBy': user.id,
+        'schedule': [],
+    }
+
+    result = Rosters.find_one_and_update(
         {
             'name': name,
             'chat_id': chat_id,
         },
-        {
-            'name': name,
-            'chat_id': chat_id,
-            'createdAt': datetime.datetime.now(),
-            'interval': 'week',
-            'createdBy': user.id,
-            'schedule': [],
-        },
-        upsert=True
+        { '$setOnInsert': roster },
+        upsert=True,
+        return_document=pymongo.ReturnDocument.AFTER,
     )
 
-    roster_id = result.inserted_id
+    roster_id = result['_id']
 
     message = fr'➕ New roster added: *{name}*' + '\n_Hit the button below to join the roster_'
 
@@ -900,9 +922,9 @@ def cancel(update: Update, _: CallbackContext) -> int:
     logger.info("User %s cancelled the conversation.", user.first_name)
     return ConversationHandler.END
 
-
 def send_beta_v2(update: Update, _: CallbackContext):
     add_to_waitlist(update)
+    return ConversationHandler.END
 
     # if update.message is not None and message is not None:
     #     update.message.reply_markdown_v2(message, quote=False)

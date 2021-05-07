@@ -55,6 +55,7 @@ from commands_v2 import (
     leave_roster,
     send_beta_v2,
     whitelist_user,
+    check_whitelist,
     GET_ROSTER_NAME,
 )
 
@@ -334,18 +335,18 @@ def main():
     filters = get_whitelist_filter()
     blacklisted_filter = Filters.command & ~ Filters.text('welcome') & ~ filters
 
-    dispatcher.add_handler(CommandHandler("start", start, filters=filters))
-    dispatcher.add_handler(CommandHandler("done", mark_as_done, filters=filters))
-    dispatcher.add_handler(CommandHandler("duties", show_duties, filters=filters))
-    dispatcher.add_handler(CommandHandler("join", join_roster_select, filters=filters))
-    dispatcher.add_handler(CommandHandler("rosters", show_rosters, filters=filters))
-    dispatcher.add_handler(CommandHandler("leave", leave_roster_select, filters=filters))
-    # dispatcher.add_handler(CommandHandler("reschedule", reschedule, filters=filters))
-    # dispatcher.add_handler(CommandHandler("editduty", editduty, filters=filters))
-    # dispatcher.add_handler(CommandHandler("nextduty", next_duty, filters=filters))
+    dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
+    dispatcher.add_handler(CommandHandler("done", check_whitelist(mark_as_done)))
+    dispatcher.add_handler(CommandHandler("duties", check_whitelist(show_duties)))
+    dispatcher.add_handler(CommandHandler("join", check_whitelist(join_roster_select)))
+    dispatcher.add_handler(CommandHandler("rosters", check_whitelist(show_rosters)))
+    dispatcher.add_handler(CommandHandler("leave", check_whitelist(leave_roster_select)))
+    # dispatcher.add_handler(CommandHandler("reschedule", check_whitelist(reschedule)))
+    # dispatcher.add_handler(CommandHandler("editduty", check_whitelist(editduty)))
+    # dispatcher.add_handler(CommandHandler("nextduty", check_whitelist(next_duty)))
 
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('createroster', create_roster)],
+        entry_points=[CommandHandler('createroster', check_whitelist(create_roster))],
         states={
             GET_ROSTER_NAME: [MessageHandler(Filters.text & ~Filters.command, receive_roster_name)],
         },
@@ -357,9 +358,9 @@ def main():
     dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern='^addtoroster\.'))
     dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern='^rosterdone\.'))
     dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern='^leave\.'))
-    
-    dispatcher.add_handler(CommandHandler("welcome", whitelist_user, filters=~filters))
-    dispatcher.add_handler(MessageHandler(blacklisted_filter, send_beta_v2))
+
+    dispatcher.add_handler(CommandHandler("welcome", whitelist_user))
+    # dispatcher.add_handler(MessageHandler(blacklisted_filter, send_beta_v2))
 
     updater.start_polling()
     updater.idle()
