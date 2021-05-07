@@ -7,7 +7,12 @@ import datetime
 from bson.objectid import ObjectId
 from urllib.parse import urlencode
 
-from telegram import User
+from telegram import (
+    Update,
+    Bot,
+    User,
+    constants
+)
 
 from mongo import (
     Chats,
@@ -34,6 +39,14 @@ chat_properties = [
     'title',
     'all_members_are_administrators',
 ]
+
+VAMONKE_ID = 265435469
+
+TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN') or '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
+TEST_TELEGRAM_TOKEN = '1798724954:AAGuKOTuVWX8qfuRLUx1EU82Di9czAR6kFs'
+
+ENVIRONMENT = os.environ.get('ENVIRONMENT')
+IS_DEV = ENVIRONMENT is not 'prod'
 
 def get_name_from_user_id(user_id):
     user_dict = Users.find_one({ 'id': user_id })
@@ -72,3 +85,24 @@ def get_is_whitelisted(update):
         return True
 
     return False
+
+def configure_telegram():
+    """
+    Configures the bot with a Telegram Token.
+    Returns a bot instance.
+    """
+    TOKEN = TEST_TELEGRAM_TOKEN if IS_DEV else TELEGRAM_TOKEN
+    if not TOKEN:
+        logger.error('The TELEGRAM_TOKEN must be set')
+        raise NotImplementedError
+
+    # print(TOKEN)
+    return Bot(TOKEN)
+
+def alert_creator(message):
+    bot = configure_telegram()
+    bot.send_message(
+        chat_id=VAMONKE_ID,
+        text=message,
+        parse_mode=constants.PARSEMODE_MARKDOWN_V2,
+    )

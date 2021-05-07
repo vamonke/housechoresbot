@@ -23,6 +23,7 @@ from telegram import (
 from telegram.ext import (
     # CallbackContext,
     CallbackQueryHandler,
+    ChatMemberHandler,
     CommandHandler,
     ConversationHandler,
     Dispatcher,
@@ -55,10 +56,12 @@ from commands_v2 import (
     send_beta_v2,
     whitelist_user,
     check_whitelist,
+    save_new_group,
     GET_ROSTER_NAME,
 )
 
 from helpers import (
+    configure_telegram,
     get_whitelisted_chats,
     get_whitelisted_users
 )
@@ -104,19 +107,6 @@ WHITELISTED_USER_IDS = [
     59546722,
 ]
 
-def configure_telegram():
-    """
-    Configures the bot with a Telegram Token.
-    Returns a bot instance.
-    """
-    TOKEN = TEST_TELEGRAM_TOKEN if IS_DEV else TELEGRAM_TOKEN
-    if not TOKEN:
-        logger.error('The TELEGRAM_TOKEN must be set')
-        raise NotImplementedError
-
-    print(TOKEN)
-    return Bot(TOKEN)
-
 def webhook(event, context):
     """
     Runs the Telegram webhook.
@@ -159,6 +149,7 @@ def set_webhook(event, context):
     return ERROR_RESPONSE
 
 def add_handlers(dispatcher):
+    # Commands
     dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
     dispatcher.add_handler(CommandHandler("done", check_whitelist(mark_as_done)))
     dispatcher.add_handler(CommandHandler("duties", check_whitelist(show_duties)))
@@ -169,6 +160,7 @@ def add_handlers(dispatcher):
     # dispatcher.add_handler(CommandHandler("editduty", check_whitelist(editduty)))
     # dispatcher.add_handler(CommandHandler("nextduty", check_whitelist(next_duty)))
 
+    # Create roster conversation
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('createroster', check_whitelist(create_roster))],
         states={
@@ -178,24 +170,37 @@ def add_handlers(dispatcher):
     )
     dispatcher.add_handler(conv_handler)
 
+    # Callback handlers
     dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern='^(joinnewroster|join)\.'))
     dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern='^addtoroster\.'))
     dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern='^rosterdone\.'))
     dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern='^leave\.'))
 
+    # Beta message
     dispatcher.add_handler(CommandHandler("welcome", whitelist_user))
     # dispatcher.add_handler(MessageHandler(blacklisted_filter, send_beta_v2))
+    dispatcher.add_handler(ChatMemberHandler(save_new_group))
 
 def main():
-    TOKEN = TEST_TELEGRAM_TOKEN if IS_DEV else TELEGRAM_TOKEN
-    updater = Updater(TOKEN)
+    # updater = Updater(TELEGRAM_TOKEN)
+    updater = Updater(TEST_TELEGRAM_TOKEN)
     dispatcher = updater.dispatcher
     add_handlers(dispatcher)
     updater.start_polling()
     updater.idle()
 
-# if __name__ == '__main__':
-#     if IS_DEV:
-        # main()
-        # main_dev()
-        # routine(None, None)
+def dev():
+    body = {'update_id': 136580227, 'my_chat_member': {'chat': {'id': -463862443, 'type': 'group', 'title': 'CHATBOT TEST', 'all_members_are_administrators': True}, 'date': 1620411340, 'old_chat_member': {'user': {'id': 1798724954, 'first_name': 'Duty Roster Bot', 'is_bot': True, 'username': 'DutyRosterBot'}, 'status': 'member', 'until_date': None}, 'new_chat_member': {'user': {'id': 1798724954, 'first_name': 'Duty Roster Bot', 'is_bot': True, 'username': 'DutyRosterBot'}, 'status': 'left', 'until_date': None}, 'from': {'id': 265435469, 'first_name': 'Varick', 'is_bot': False, 'last_name': 'Lim', 'username': 'vamonke', 'language_code': 'en'}}}
+    
+    # Create bot and dispatcher instances
+    bot = configure_telegram()
+    dispatcher = Dispatcher(bot, None, workers=0)
+    add_handlers(dispatcher)
+    
+    update = Update.de_json(body, bot)
+    dispatcher.process_update(update)
+
+if __name__ == '__main__':
+    main()
+    # dev()
+    # routine(None, None)

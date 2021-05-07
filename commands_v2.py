@@ -44,6 +44,7 @@ from helpers import (
     get_user_dict_from_user,
     get_chat_dict_from_chat,
     get_is_whitelisted,
+    alert_creator,
 )
 
 from logger import logger
@@ -61,23 +62,22 @@ WEEKS_IN_ADVANCE = 2
 
 def start(update: Update, context: CallbackContext):
     """ Create chat and user """
-
     user = update.effective_user
     chat = update.effective_chat
 
-    chat_dict = get_chat_dict_from_chat(chat)
-    chat_dict['addedBy'] = user.id
-    chat_dict['isWhitelisted'] = True
+    # chat_dict = get_chat_dict_from_chat(chat)
+    # chat_dict['addedBy'] = user.id
+    # chat_dict['isWhitelisted'] = True
 
-    Chats.update_one(
-        { 'id': chat_dict['id'] },
-        { '$set': chat_dict },
-        upsert=True
-    )
+    # Chats.update_one(
+    #     { 'id': chat_dict['id'] },
+    #     { '$set': chat_dict },
+    #     upsert=True
+    # )
     create_user(user)
 
     user_text = user.mention_markdown_v2()
-    message =  fr'Hi {user_text}\! House Chores Bot helps track household chores\. To begin\, send \/createroster\.' # For more info\, send \/help\.
+    message =  fr'Hi {user_text}\! You have been specially selected as a beta tester for House Chores Bot\, a bot to help track household chores\. To begin\, send \/createroster\.' # For more info\, send \/help\.
     update.message.reply_markdown_v2(message, quote=False)
 
 def check_whitelist(fn):
@@ -937,3 +937,37 @@ def send_beta_v2(update: Update, _: CallbackContext):
     #     message = fr"{user_text} spoke to HouseChoresBot\! 😀"
 
     # alert_creator(message)
+
+def save_new_group(update: Update, _: CallbackContext):
+    user = update.effective_user
+    user_id = user.id
+    user_text = user.mention_markdown_v2()
+
+    chat = update.effective_chat
+    chat_id = chat.id
+    chat_title = chat.title
+    
+    my_chat_member = update.my_chat_member
+    from_user = my_chat_member.from_user
+    new_chat_member = my_chat_member.new_chat_member
+    status = new_chat_member.status
+
+    message = fr'Bot status\: `{status}` in {chat_title} by {user_text}'
+    alert_creator(message)
+
+    if status is telegram.constants.CHATMEMBER_MEMBER:
+        chat_dict = get_chat_dict_from_chat(chat)
+        chat_dict['addedBy'] = user_id
+        # chat_dict['isWhitelisted'] = True
+        Chats.update_one(
+            { 'id': chat_dict['id'] },
+            { '$set': chat_dict },
+            upsert=True
+        )
+    elif status in [telegram.constants.CHATMEMBER_KICKED, telegram.constants.CHATMEMBER_LEFT]:
+        Chats.update_one(
+            { 'id': chat_id },
+            { '$set': { 'isRemoved': True } },
+        )
+
+    # create_user(user)
