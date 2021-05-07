@@ -83,7 +83,7 @@ ERROR_RESPONSE = {
 
 logger = logging.getLogger(__name__)
 
-# TELEGRAM_TOKEN = '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
+TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN') or '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
 TEST_TELEGRAM_TOKEN = '1798724954:AAGuKOTuVWX8qfuRLUx1EU82Di9czAR6kFs'
 
 ENVIRONMENT = os.environ.get('ENVIRONMENT')
@@ -116,7 +116,7 @@ def configure_telegram():
     Returns a bot instance.
     """
 
-    TELEGRAM_TOKEN = TEST_TELEGRAM_TOKEN if is_dev else os.environ.get('TELEGRAM_TOKEN')
+    TELEGRAM_TOKEN = TEST_TELEGRAM_TOKEN if IS_DEV else TELEGRAM_TOKEN
     if not TELEGRAM_TOKEN:
         logger.error('The TELEGRAM_TOKEN must be set')
         raise NotImplementedError
@@ -365,7 +365,7 @@ def main():
     updater.start_polling()
     updater.idle()
 
-if __name__ == '__main__':
-    if IS_DEV:
-        main()
+# if __name__ == '__main__':
+#     if IS_DEV:
+#         main()
         # routine(None, None)

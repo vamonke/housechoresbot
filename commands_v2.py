@@ -60,7 +60,8 @@ GET_ROSTER_NAME = 0
 WEEKS_IN_ADVANCE = 2
 
 def start(update: Update, context: CallbackContext):
-    """ Create chat """
+    """ Create chat and user """
+
     user = update.effective_user
     chat = update.effective_chat
 
@@ -80,7 +81,7 @@ def start(update: Update, context: CallbackContext):
     update.message.reply_markdown_v2(message, quote=False)
 
 def check_whitelist(fn):
-    def wrapper(update: Update, context: CallbackContext):        
+    def wrapper(update: Update, context: CallbackContext):
         is_whitelisted = get_is_whitelisted(update)
         if is_whitelisted:
             return fn(update, context)

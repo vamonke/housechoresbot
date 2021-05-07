@@ -63,12 +63,12 @@ def get_whitelisted_users():
 def get_is_whitelisted(update):
     user_id = update.effective_user.id
     user_dict = Users.find_one({ 'id': user_id })
-    if 'isWhitelisted' in user_dict and user_dict['isWhitelisted']:
+    if user_dict and user_dict.get('isWhitelisted'):
         return True
 
     chat_id = update.effective_chat.id
     chat_dict = Chats.find_one({ 'id': chat_id })
-    if 'isWhitelisted' in chat_dict and chat_dict['isWhitelisted']:
+    if chat_dict and chat_dict.get('isWhitelisted'):
         return True
 
     return False
