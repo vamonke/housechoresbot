@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 from telegram import User
 
 from mongo import (
-    # Chats,
+    Chats,
     # Schedules,
     # Rosters,
     # Duties,
@@ -28,6 +28,13 @@ user_properties = [
     'language_code',
 ]
 
+chat_properties = [
+    'id',
+    'type',
+    'title',
+    'all_members_are_administrators',
+]
+
 def get_name_from_user_id(user_id):
     user_dict = Users.find_one({ 'id': user_id })
     if user_dict is None:
@@ -38,3 +45,17 @@ def get_name_from_user_id(user_id):
 def get_user_dict_from_user(user):
     user_dict = { k: v for k, v in user.__dict__.items() if k in user_properties }
     return user_dict
+
+def get_chat_dict_from_chat(chat):
+    chat_dict = { k: v for k, v in chat.__dict__.items() if k in chat_properties }
+    return chat_dict
+
+def get_whitelisted_chats():
+    chats = Chats.find({ 'isWhitelisted': True })
+    chat_ids = [c['id'] for c in list(chats)]
+    return chat_ids
+
+def get_whitelisted_users():
+    users = Users.find({ 'isWhitelisted': True })
+    user_ids = [u['id'] for u in list(users)]
+    return user_ids

@@ -53,7 +53,14 @@ from commands_v2 import (
     show_rosters,
     leave_roster_select,
     leave_roster,
+    send_beta_v2,
+    whitelist_user,
     GET_ROSTER_NAME,
+)
+
+from helpers import (
+    get_whitelisted_chats,
+    get_whitelisted_users
 )
 
 # Logging is cool!
@@ -90,7 +97,7 @@ user_properties = [
     'language_code',
 ]
 
-LIM_FAMILY_USER_IDS = [
+WHITELISTED_USER_IDS = [
     # 265435469, # VAMONKE
     808439673,
     278239097,
@@ -303,18 +310,39 @@ def routine(event, context):
 
     create_duties()
 
+def get_whitelist_filter():
+    chat_ids = get_whitelisted_chats()
+    chat_filters = Filters.chat(chat_id=chat_ids)
+
+    user_ids = get_whitelisted_users()
+    # print(user_ids)
+    user_filters = Filters.user(user_id=user_ids)
+
+    test_filters = (
+        Filters.chat(chat_id=-463862443) | \
+        Filters.user(user_id=808439673) | \
+        Filters.user(user_id=278239097) | \
+        Filters.user(user_id=59546722)
+    )
+
+    return (chat_filters | user_filters | test_filters)
+
 def main():
     updater = Updater(TEST_TELEGRAM_TOKEN)
     dispatcher = updater.dispatcher
 
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("done", mark_as_done))
-    dispatcher.add_handler(CommandHandler("duties", show_duties))
-    dispatcher.add_handler(CommandHandler("join", join_roster_select))
-    dispatcher.add_handler(CommandHandler("rosters", show_rosters))
-    dispatcher.add_handler(CommandHandler("leave", leave_roster_select))
-    # dispatcher.add_handler(CommandHandler("reschedule", lambda update, _ : function_wrapper(reschedule, update)))
-    # dispatcher.add_handler(CommandHandler("nextduty", lambda update, _ : function_wrapper(next_duty, update)))
+    filters = get_whitelist_filter()
+    blacklisted_filter = Filters.command & ~ Filters.text('welcome') & ~ filters
+
+    dispatcher.add_handler(CommandHandler("start", start, filters=filters))
+    dispatcher.add_handler(CommandHandler("done", mark_as_done, filters=filters))
+    dispatcher.add_handler(CommandHandler("duties", show_duties, filters=filters))
+    dispatcher.add_handler(CommandHandler("join", join_roster_select, filters=filters))
+    dispatcher.add_handler(CommandHandler("rosters", show_rosters, filters=filters))
+    dispatcher.add_handler(CommandHandler("leave", leave_roster_select, filters=filters))
+    # dispatcher.add_handler(CommandHandler("reschedule", reschedule, filters=filters))
+    # dispatcher.add_handler(CommandHandler("editduty", editduty, filters=filters))
+    # dispatcher.add_handler(CommandHandler("nextduty", next_duty, filters=filters))
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('createroster', create_roster)],
@@ -325,10 +353,13 @@ def main():
     )
     dispatcher.add_handler(conv_handler)
 
-    updater.dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern='^(joinnewroster|join)\.'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern='^addtoroster\.'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern='^rosterdone\.'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern='^leave\.'))
+    dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern='^(joinnewroster|join)\.'))
+    dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern='^addtoroster\.'))
+    dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern='^rosterdone\.'))
+    dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern='^leave\.'))
+    
+    dispatcher.add_handler(CommandHandler("welcome", whitelist_user, filters=~filters))
+    dispatcher.add_handler(MessageHandler(blacklisted_filter, send_beta_v2))
 
     updater.start_polling()
     updater.idle()
@@ -336,4 +367,4 @@ def main():
 if __name__ == '__main__':
     if IS_DEV:
         main()
-    # routine(None, None)
+        # routine(None, None)

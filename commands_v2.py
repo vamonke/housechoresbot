@@ -35,12 +35,14 @@ from mongo import (
     Schedules,
     Rosters,
     Duties,
-    Users
+    Users,
+    Waitlist,
 )
 
 from helpers import (
     get_name_from_user_id,
     get_user_dict_from_user,
+    get_chat_dict_from_chat,
 )
 
 from logger import logger
@@ -50,15 +52,6 @@ week_days_short = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 GIPHY_API_KEY = '1iI19SCF571Lt9CV2uNsXv3t1CzIRznM'
 
-user_properties = [
-    'id',
-    'first_name',
-    'last_name',
-    'username',
-    'is_bot',
-    'language_code',
-]
-
 GET_ROSTER_NAME = 0
 # JOIN_ROSTER = 1
 # SELECT_DUTY_DAY = 2
@@ -66,13 +59,44 @@ GET_ROSTER_NAME = 0
 WEEKS_IN_ADVANCE = 2
 
 def start(update: Update, context: CallbackContext):
-    """Return a message when the command /start is issued."""
+    """ Create chat """
     user = update.effective_user
+    chat = update.effective_chat
 
-    # TODO: Save (upsert) chat to Chats
+    chat_dict = get_chat_dict_from_chat(chat)
+    chat_dict['addedBy'] = user.id
+    chat_dict['isWhitelisted'] = True
 
-    message =  fr'Hi {user.mention_markdown_v2()}\!'
+    Chats.update_one(
+        { 'id': chat_dict['id'] },
+        { '$set': chat_dict },
+        upsert=True
+    )
+    create_user(user)
 
+    user_text = user.mention_markdown_v2()
+    message =  fr'Hi {user_text}\! House Chores Bot helps track household chores\. To begin\, send \/createroster\.' # For more info\, send \/help\.
+    update.message.reply_markdown_v2(message, quote=False)
+
+def whitelist_user(update: Update, context: CallbackContext):
+    """ Create chat """
+    user = update.effective_user
+    chat = update.effective_chat
+    
+    now = datetime.datetime.now()
+    chat_dict = get_chat_dict_from_chat(chat)
+    chat_dict['whitelistedBy'] = user.id
+    chat_dict['whitelistedAt'] = now
+    chat_dict['isWhitelisted'] = True
+
+    Chats.update_one(
+        { 'id': chat_dict['id'] },
+        { '$set': chat_dict },
+        upsert=True
+    )
+    create_user(user)
+
+    message =  fr'🥳 You can now use House Chores Bot\! To begin\, send \/createroster\.'
     update.message.reply_markdown_v2(message, quote=False)
 
 def delete_user_duties(user_id: int, roster_id: ObjectId):
@@ -250,7 +274,11 @@ def receive_roster_name(update: Update, context: CallbackContext):
     name = update.message.text
     user = update.effective_user
 
-    result = Rosters.insert_one(
+    result = Rosters.update_one(
+        {
+            'name': name,
+            'chat_id': chat_id,
+        },
         {
             'name': name,
             'chat_id': chat_id,
@@ -259,7 +287,9 @@ def receive_roster_name(update: Update, context: CallbackContext):
             'createdBy': user.id,
             'schedule': [],
         },
+        upsert=True
     )
+
     roster_id = result.inserted_id
 
     message = fr'➕ New roster added: *{name}*' + '\n_Hit the button below to join the roster_'
@@ -389,10 +419,11 @@ def add_to_roster(update: Update, context: CallbackContext):
         update=update
     )
 
-def create_user(user):
+def create_user(user, whitelist=True):
     """Create user with upsert."""
     user_dict = get_user_dict_from_user(user)
     user_dict['createdAt'] = datetime.datetime.now()
+    user_dict['isWhitelisted'] = whitelist
 
     result = Users.find_one_and_update(
         { 'id': user_dict['id'] },
@@ -710,22 +741,28 @@ def leave_roster_select(update: Update, context: CallbackContext):
     )
 
 def add_to_waitlist(update):
+    # Add user
     user = update.effective_user
-    user_dict = { k: v for k, v in user.__dict__.items() if k in user_properties }
-    user_dict['isWaiting'] = True
-    user_dict['createdAt'] = datetime.datetime.now()
+    user_id = user.id
+    create_user(user, whitelist=False)
 
-    waitlist = setup_mongodb()["waitlist"]
+    # Add chat
+    chat = update.effective_chat
+    chat_dict = get_chat_dict_from_chat(chat)
+    chat_dict['addedBy'] = user_id
+    chat_dict['createdAt'] = datetime.datetime.now()
+    chat_dict['isWhitelisted'] = False
 
-    result = waitlist.find_one_and_update(
-        { 'id': user_dict['id'] },
-        { '$setOnInsert': user_dict },
-        upsert=True,
+    Chats.update_one(
+        { 'id': chat_dict['id'] },
+        { '$set': chat_dict },
+        upsert=True
     )
 
     user_text = user.mention_markdown_v2()
     message = fr"👋 Hello {user_text}\! House Chores Bot is currently in closed beta\. Will let you know when it\'s ready for you 😃"
-    return message
+
+    update.message.reply_markdown_v2(message, quote=False)
 
 def user_next_duty(user_dict: dict, roster: dict, update: Update):
     """Get user's next duty date"""
@@ -862,3 +899,18 @@ def cancel(update: Update, _: CallbackContext) -> int:
     user = update.message.from_user
     logger.info("User %s cancelled the conversation.", user.first_name)
     return ConversationHandler.END
+
+
+def send_beta_v2(update: Update, _: CallbackContext):
+    add_to_waitlist(update)
+
+    # if update.message is not None and message is not None:
+    #     update.message.reply_markdown_v2(message, quote=False)
+    #     logger.info(message)
+
+    # message = fr"Someone spoke to HouseChoresBot\! ❓"
+    # if update.effective_user is not None:
+    #     user_text = update.effective_user.mention_markdown_v2()
+    #     message = fr"{user_text} spoke to HouseChoresBot\! 😀"
+
+    # alert_creator(message)
