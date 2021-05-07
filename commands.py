@@ -218,15 +218,20 @@ def create_duties() -> str:
                 if (date < today):
                     date += datetime.timedelta(weeks=1)
                     continue
-                duty = {
-                    'user': user_dict['id'],
-                    'date': date,
-                    'createdAt': now,
-                    'isCompleted': False,
-                }
                 request = pymongo.UpdateOne(
-                    duty,
-                    { '$setOnInsert': duty },
+                    {
+                        'user': user_dict['id'],
+                        'date': date,
+                        'isCompleted': False,
+                    },
+                    { '$setOnInsert': 
+                        {
+                            'user': user_dict['id'],
+                            'date': date,
+                            'createdAt': now,
+                            'isCompleted': False,
+                        }
+                    },
                     upsert=True
                 )
                 requests.append(request)
