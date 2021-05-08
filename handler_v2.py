@@ -48,6 +48,7 @@ from commands_v2 import (
     cancel,
     join_roster_select,
     join_roster,
+    add_to_new_roster,
     add_to_roster,
     mark_roster_as_done,
     show_rosters,
@@ -178,6 +179,7 @@ def add_handlers(dispatcher):
 
     # Callback handlers
     dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern='^(joinnewroster|join)\.'))
+    dispatcher.add_handler(CallbackQueryHandler(add_to_new_roster, pattern='^addtonewroster\.'))
     dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern='^addtoroster\.'))
     dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern='^rosterdone\.'))
     dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern='^leave\.'))
