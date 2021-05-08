@@ -543,11 +543,20 @@ def add_to_waitlist(update):
     user = update.effective_user
     user_dict = { k: v for k, v in user.__dict__.items() if k in user_properties }
     user_dict['isWaiting'] = True
+    user_dict['isWhitelisted'] = False
     user_dict['createdAt'] = datetime.datetime.now()
 
-    waitlist = setup_mongodb()["waitlist"]
+    mongo_db = setup_mongodb()
+    waitlist = mongo_db["waitlist"]
+    users = mongo_db["users"]
 
-    result = waitlist.find_one_and_update(
+    waitlist.find_one_and_update(
+        { 'id': user_dict['id'] },
+        { '$setOnInsert': user_dict },
+        upsert=True,
+    )
+
+    users.find_one_and_update(
         { 'id': user_dict['id'] },
         { '$setOnInsert': user_dict },
         upsert=True,
