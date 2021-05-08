@@ -155,6 +155,8 @@ def set_webhook(event, context):
 def add_handlers(dispatcher):
     # Commands
     dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
+    dispatcher.add_handler(CommandHandler("createroster", check_whitelist(create_roster)))
+    dispatcher.add_handler(MessageHandler(Filters.reply & ~Filters.command, check_whitelist(receive_roster_name)))
     dispatcher.add_handler(CommandHandler("done", check_whitelist(mark_as_done)))
     dispatcher.add_handler(CommandHandler("duties", check_whitelist(show_duties)))
     dispatcher.add_handler(CommandHandler("join", check_whitelist(join_roster_select)))
@@ -165,14 +167,14 @@ def add_handlers(dispatcher):
     # dispatcher.add_handler(CommandHandler("nextduty", check_whitelist(next_duty)))
 
     # Create roster conversation
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('createroster', check_whitelist(create_roster))],
-        states={
-            GET_ROSTER_NAME: [MessageHandler(Filters.text & ~Filters.command, receive_roster_name)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)],
-    )
-    dispatcher.add_handler(conv_handler)
+    # conv_handler = ConversationHandler(
+    #     entry_points=[CommandHandler('createroster', check_whitelist(create_roster))],
+    #     states={
+    #         GET_ROSTER_NAME: [MessageHandler(Filters.text & ~Filters.command, receive_roster_name)],
+    #     },
+    #     fallbacks=[CommandHandler('cancel', cancel)],
+    # )
+    # dispatcher.add_handler(conv_handler)
 
     # Callback handlers
     dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern='^(joinnewroster|join)\.'))
@@ -186,8 +188,8 @@ def add_handlers(dispatcher):
     dispatcher.add_handler(ChatMemberHandler(save_chat_group))
 
 def main():
-    # updater = Updater(TELEGRAM_TOKEN)
-    updater = Updater(TEST_TELEGRAM_TOKEN)
+    updater = Updater(TELEGRAM_TOKEN)
+    # updater = Updater(TEST_TELEGRAM_TOKEN)
     dispatcher = updater.dispatcher
     add_handlers(dispatcher)
     updater.start_polling()
@@ -200,11 +202,11 @@ def dev():
     bot = configure_telegram()
     dispatcher = Dispatcher(bot, None, workers=0)
     add_handlers(dispatcher)
-    
+
     update = Update.de_json(body, bot)
     dispatcher.process_update(update)
 
-# if __name__ == '__main__':
-    # main()
+if __name__ == '__main__':
+    main()
     # dev()
     # routine(None, None)

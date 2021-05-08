@@ -54,6 +54,8 @@ week_days_short = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 GIPHY_API_KEY = '1iI19SCF571Lt9CV2uNsXv3t1CzIRznM'
 
+HOUSE_CHORES_BOT_ID = 1783406286
+
 GET_ROSTER_NAME = 0
 # JOIN_ROSTER = 1
 # SELECT_DUTY_DAY = 2
@@ -291,6 +293,22 @@ def receive_roster_name(update: Update, context: CallbackContext):
     """Create roster with chat_id and name"""
 
     chat_id = update.message.chat.id
+    
+    # Verify if message is reply to bot create_roster message
+
+    # Check sender of create_roster message
+    message = update.effective_message
+    reply_to_message = message.reply_to_message
+    user_to_reply_id = reply_to_message.from_user.id
+    if user_to_reply_id != HOUSE_CHORES_BOT_ID:
+        return
+    
+    # Check content of create_roster message
+    substring = 'what\'s the name of the chore?'
+    message_to_reply = reply_to_message.text
+    if substring not in message_to_reply:
+        return
+
     name = update.message.text
     user = update.effective_user
 
@@ -575,7 +593,7 @@ def mark_as_done(update: Update, context: CallbackContext):
 
     # Find roster
     roster = Rosters.find_one(duty['roster_id'])
-    if roster is not None:
+    if roster:
         roster_name = roster['name']
         message = fr'✅ {user_text} just completed *{roster_name}*\! 👏 👏 👏'
 
