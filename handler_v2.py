@@ -56,7 +56,7 @@ from commands_v2 import (
     send_beta_v2,
     whitelist_user,
     check_whitelist,
-    save_new_group,
+    save_chat_group,
     GET_ROSTER_NAME,
 )
 
@@ -183,7 +183,7 @@ def add_handlers(dispatcher):
     # Beta message
     dispatcher.add_handler(CommandHandler("welcome", whitelist_user))
     # dispatcher.add_handler(MessageHandler(blacklisted_filter, send_beta_v2))
-    dispatcher.add_handler(ChatMemberHandler(save_new_group))
+    dispatcher.add_handler(ChatMemberHandler(save_chat_group))
 
 def main():
     # updater = Updater(TELEGRAM_TOKEN)

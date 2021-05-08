@@ -925,6 +925,11 @@ def cancel(update: Update, _: CallbackContext) -> int:
 
 def send_beta_v2(update: Update, _: CallbackContext):
     add_to_waitlist(update)
+
+    user_text = update.effective_user.mention_markdown_v2()
+    message = fr"{user_text} spoke to HouseChoresBot\! 😀"
+    alert_creator(message)
+
     return ConversationHandler.END
 
     # if update.message is not None and message is not None:
@@ -938,7 +943,7 @@ def send_beta_v2(update: Update, _: CallbackContext):
 
     # alert_creator(message)
 
-def save_new_group(update: Update, _: CallbackContext):
+def save_chat_group(update: Update, _: CallbackContext):
     user = update.effective_user
     user_id = user.id
     user_text = user.mention_markdown_v2()
