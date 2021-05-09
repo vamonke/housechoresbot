@@ -86,6 +86,7 @@ def check_whitelist(fn):
     def wrapper(update: Update, context: CallbackContext):
         is_whitelisted = get_is_whitelisted(update)
         if is_whitelisted:
+            logger.info(fn.__name__)
             return fn(update, context)
         return send_beta_v2(update, context)
 
@@ -123,6 +124,7 @@ def whitelist_user(update: Update, context: CallbackContext):
 
 def delete_user_duties(user_id: int, roster_id: ObjectId):
     """ Remove future user duties from this roster """
+    logger.info(fr'Removing duties with user_id {user_id} and roster_id {roster_id}')
     now = datetime.datetime.now()
     today = datetime.datetime(now.year, now.month, now.day)
     Duties.delete_many(
@@ -138,20 +140,23 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
     """Create duties for a user"""
 
     if user_dict is None or roster is None or 'dutyDay' not in user_dict:
+        logger.warn("Missing arguments")
         return
+
+    roster_id = roster['_id']
+    user_id = user_dict['id']
+    chat_id = update.effective_chat.id
+
+    logger.info(fr'Creating duties with user_id {user_id} and roster_id {roster_id}')
+
+    # Remove future user duties from this roster
+    # delete_user_duties(user_id, roster_id)
 
     # Get window to create duties
     now = datetime.datetime.now()
     today = datetime.datetime(now.year, now.month, now.day)
     start_of_cycle = today - datetime.timedelta(days=today.weekday())
     end_of_cycle = start_of_cycle + datetime.timedelta(weeks=WEEKS_IN_ADVANCE)
-
-    roster_id = roster['_id']
-    user_id = user_dict['id']
-    chat_id = update.effective_chat.id
-
-    # Remove future user duties from this roster
-    delete_user_duties(user_id, roster_id)
 
     # Get mongodb inserts
     requests = []
@@ -257,7 +262,7 @@ def show_rosters(update: Update, context: CallbackContext):
 
         roster_users = roster['schedule']
         if not roster_users:
-            message += fr'\(Roster is empty\)' + '\n'
+            message += fr'\(Empty\)' + '\n'
         else:
             for user_dict in roster_users:
                 user = User(**user_dict)
@@ -403,21 +408,46 @@ def join_roster(update: Update, context: CallbackContext):
         return
 
     roster_name = roster['name']
-    message = fr'{user.mention_markdown_v2()} which day\(s\) do you wanna do: *{roster_name}*\?' + '\n'
+    roster_schedule = roster['schedule']
 
-    keyboard = [
-        [
-            InlineKeyboardButton("Mon", callback_data=fr'addtoroster.{roster_id}.0'),
-            InlineKeyboardButton("Tue", callback_data=fr'addtoroster.{roster_id}.1'),
-            InlineKeyboardButton("Wed", callback_data=fr'addtoroster.{roster_id}.2'),
-            InlineKeyboardButton("Thu", callback_data=fr'addtoroster.{roster_id}.3'),
-            InlineKeyboardButton("Fri", callback_data=fr'addtoroster.{roster_id}.4'),
-        ],
-        [
-            InlineKeyboardButton("Sat", callback_data=fr'addtoroster.{roster_id}.5'),
-            InlineKeyboardButton("Sun", callback_data=fr'addtoroster.{roster_id}.6'),
-        ]
-    ]
+
+    message = ''
+    if roster_schedule:
+        message += fr'Current schedule for *{roster_name}*\:' + "\n"
+
+    for user_schedule in sorted(roster_schedule, key=lambda us: us['dutyDay']):
+        user = User(**user_schedule)
+        user_text = user.mention_markdown_v2()
+        duty_day = user_schedule['dutyDay']
+        day = week_days_short[duty_day]
+        message += fr'`{day}\:` {user_text}' + "\n"
+    
+    message += '\n' + fr'{user.mention_markdown_v2()} which day do you wanna do\: *{roster_name}*\?'
+
+    selected_duty_days = [us['dutyDay'] for us in roster_schedule]
+
+    weekday_buttons = []
+    for (i, weekday) in enumerate(week_days_short[:5]):
+        if i in selected_duty_days:
+            continue
+        weekday_buttons.append(
+            InlineKeyboardButton(weekday, callback_data=fr'addtoroster.{roster_id}.{i}')
+        )
+
+    weekend_buttons = []
+    for (i, weekend) in enumerate(week_days_short[-2:]):
+        if (i + 5) in selected_duty_days:
+            continue
+        weekend_buttons.append(
+            InlineKeyboardButton(weekend, callback_data=fr'addtoroster.{roster_id}.{i}')
+        )
+
+    if selected_duty_days:
+        weekend_buttons.append(
+            InlineKeyboardButton("Remove me", callback_data=fr'addtoroster.{roster_id}.-1')
+        )
+
+    keyboard = [weekday_buttons, weekend_buttons]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     if is_new_roster:
@@ -444,7 +474,7 @@ def add_to_new_roster(update: Update, context: CallbackContext):
     roster = Rosters.find_one(roster_id)
 
     if roster is None:
-        message = 'Oops! This roster has been removed.'
+        message = 'Oops! This chore has been removed. You can create a new chore by sending \/createchore.'
         query.edit_message_text(text=message)
         return
 
@@ -514,7 +544,7 @@ def add_to_new_roster(update: Update, context: CallbackContext):
 
     weekend_buttons = []
     for (i, weekend) in enumerate(week_days_short[-2:]):
-        if (i - 5) in selected_duty_days:
+        if (i + 5) in selected_duty_days:
             continue
         weekend_buttons.append(
             InlineKeyboardButton(weekend, callback_data=fr'addtonewroster.{roster_id}.{i}')
@@ -522,7 +552,7 @@ def add_to_new_roster(update: Update, context: CallbackContext):
 
     if selected_duty_days:
         weekend_buttons.append(
-            InlineKeyboardButton("No thanks", callback_data=fr'addtonewroster.{roster_id}.-1')
+            InlineKeyboardButton("Remove me", callback_data=fr'addtonewroster.{roster_id}.-1')
         )
 
     keyboard = [weekday_buttons, weekend_buttons]
@@ -560,42 +590,58 @@ def add_to_roster(update: Update, context: CallbackContext):
         return
 
     user = update.effective_user
+    user_id = user.id
     user_dict = get_user_dict_from_user(user)
     duty_day = int(duty_day)
     user_dict['dutyDay'] = duty_day
 
-    if any(u['id'] == user.id for u in roster['schedule']):
-        # Update existing user in schedule
-        result = Rosters.update_one(
+    roster_schedule = roster['schedule']
+    user_ids = [us['id'] for us in roster_schedule]
+
+    if duty_day == -1:
+        if user_id not in user_ids:
+            return
+        # Remove existing user day in schedule
+        roster = Rosters.find_one_and_update(
             { '_id': roster_id },
-            { '$set':
-                { "schedule.$[user]": user_dict },
+            { '$pull':
+                { 'schedule': { 'id': user_id } }
             },
-            array_filters=[{ "user.id": user_dict['id'] }],
+            return_document=pymongo.ReturnDocument.AFTER,
         )
+    elif any((u['dutyDay'] == duty_day and u['id'] == user_dict['id']) for u in roster_schedule):
+        logger.error('Duty day clash!')
     else:
-        # Add new user to schedule
-        result = Rosters.update_one(
+        # Add user to schedule
+        roster = Rosters.find_one_and_update(
             { '_id': roster_id },
             { '$addToSet':
                 { "schedule": user_dict },
             },
+            return_document=pymongo.ReturnDocument.AFTER,
         )
 
-    logger.info(result.raw_result)
-
-    day = week_days[duty_day]
+    roster_schedule = roster['schedule']
+    duty_days_long = [("*" + week_days[us['dutyDay']] + "*") for us in roster_schedule]
+    days_str = ", ".join(duty_days_long)
     roster_name = roster['name']
     user_text = user.mention_markdown_v2()
 
-    message = f"{user_text} has chosen to do *{roster_name}* on *{day}* 👌"
+    if days_str:
+        message = f"{user_text} has chosen to do *{roster_name}* on {days_str} 👌"
+    else:
+        message = f"{user_text} has removed themself from *{roster_name}*"
+
     query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
 
-    create_user_duties(
-        user_dict=user_dict,
-        roster=roster,
-        update=update
-    )
+    if duty_day == -1:
+        delete_user_duties(user_id=user_id, roster_id=roster_id)
+    else:
+        create_user_duties(
+            user_dict=user_dict,
+            roster=roster,
+            update=update
+        )
 
 def create_user(user, whitelist=True):
     """Create user with upsert."""
