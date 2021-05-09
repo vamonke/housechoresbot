@@ -88,6 +88,8 @@ def check_whitelist(fn):
         if is_whitelisted:
             logger.info(fn.__name__)
             return fn(update, context)
+        
+        logger.info('User not whitelisted. Sending beta message.')
         return send_beta_v2(update, context)
 
     return wrapper
@@ -127,7 +129,7 @@ def delete_user_duties(user_id: int, roster_id: ObjectId):
     logger.info(fr'Removing duties with user_id {user_id} and roster_id {roster_id}')
     now = datetime.datetime.now()
     today = datetime.datetime(now.year, now.month, now.day)
-    Duties.delete_many(
+    result = Duties.delete_many(
         {
             'user': user_id,
             'roster_id': roster_id,
@@ -135,6 +137,8 @@ def delete_user_duties(user_id: int, roster_id: ObjectId):
             'date': { '$gte': today },
         }
     )
+    logger.info('Bulk delete duties result:')
+    logger.info(result.raw_result)
 
 def create_user_duties(user_dict: dict, roster: dict, update: Update):
     """Create duties for a user"""
@@ -157,6 +161,8 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
     today = datetime.datetime(now.year, now.month, now.day)
     start_of_cycle = today - datetime.timedelta(days=today.weekday())
     end_of_cycle = start_of_cycle + datetime.timedelta(weeks=WEEKS_IN_ADVANCE)
+
+    logger.info(fr'Start of cycle: {start_of_cycle} End of cycle: {end_of_cycle}')
 
     # Get mongodb inserts
     requests = []
@@ -193,7 +199,8 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
 
     # Run mongodb inserts
     result = Duties.bulk_write(requests)
-    logger.info('result', result.bulk_api_result)
+    logger.info('Bulk create duties result:')
+    logger.info(result.bulk_api_result)
 
     user_next_duty(user_dict, roster, update)
 
@@ -339,7 +346,7 @@ def receive_roster_name(update: Update, context: CallbackContext):
     roster['_id'] = result['_id']
     # roster_id = result['_id']
 
-    message = fr'➕ New chore created: *{name}*' # + '\n_Hit the button below to join the roster_'
+    message = fr'➕ New weekly chore created: *{name}*' # + '\n_Hit the button below to join the roster_'
 
     # button_text = fr'Join roster: {name}'
     # callback_data = fr'joinnewroster.{roster_id}'
@@ -436,10 +443,11 @@ def join_roster(update: Update, context: CallbackContext):
 
     weekend_buttons = []
     for (i, weekend) in enumerate(week_days_short[-2:]):
-        if (i + 5) in selected_duty_days:
+        day_of_week = i + 5
+        if day_of_week in selected_duty_days:
             continue
         weekend_buttons.append(
-            InlineKeyboardButton(weekend, callback_data=fr'addtoroster.{roster_id}.{i}')
+            InlineKeyboardButton(weekend, callback_data=fr'addtoroster.{roster_id}.{day_of_week}')
         )
 
     if selected_duty_days:
@@ -474,6 +482,7 @@ def add_to_new_roster(update: Update, context: CallbackContext):
     roster = Rosters.find_one(roster_id)
 
     if roster is None:
+        logger.info(fr'Tried to add user to roster {roster_id} but it has been removed')
         message = 'Oops! This chore has been removed. You can create a new chore by sending \/createchore.'
         query.edit_message_text(text=message)
         return
@@ -484,12 +493,21 @@ def add_to_new_roster(update: Update, context: CallbackContext):
     user_dict = get_user_dict_from_user(user)
     user_dict['dutyDay'] = duty_day
 
+    logger.info(fr'Adding user {user_id} to roster {roster_id}')
+
     roster_schedule = roster['schedule']
     user_ids = [us['id'] for us in roster_schedule]
 
-    if duty_day == -1:
+    is_remove_from_roster = duty_day == -1
+
+    if is_remove_from_roster:
+        logger.info(fr'Removing user {user_id} from roster {roster_id}')
+        delete_user_duties(user_id=user_id, roster_id=roster_id) # Just in case
+
         if user_id not in user_ids:
+            logger.info(fr'User {user_id} not in roster {roster_id} schedule. Ignoring.')
             return
+
         # Remove existing user day in schedule
         roster = Rosters.find_one_and_update(
             { '_id': roster_id },
@@ -544,10 +562,11 @@ def add_to_new_roster(update: Update, context: CallbackContext):
 
     weekend_buttons = []
     for (i, weekend) in enumerate(week_days_short[-2:]):
-        if (i + 5) in selected_duty_days:
+        day_of_week = i + 5
+        if day_of_week in selected_duty_days:
             continue
         weekend_buttons.append(
-            InlineKeyboardButton(weekend, callback_data=fr'addtonewroster.{roster_id}.{i}')
+            InlineKeyboardButton(weekend, callback_data=fr'addtonewroster.{roster_id}.{day_of_week}')
         )
 
     if selected_duty_days:
@@ -564,9 +583,7 @@ def add_to_new_roster(update: Update, context: CallbackContext):
         parse_mode=constants.PARSEMODE_MARKDOWN_V2
     )
 
-    if duty_day == -1:
-        delete_user_duties(user_id=user_id, roster_id=roster_id)
-    else:
+    if not is_remove_from_roster:
         create_user_duties(
             user_dict=user_dict,
             roster=roster,
@@ -598,9 +615,16 @@ def add_to_roster(update: Update, context: CallbackContext):
     roster_schedule = roster['schedule']
     user_ids = [us['id'] for us in roster_schedule]
 
-    if duty_day == -1:
+    is_remove_from_roster = duty_day == -1
+
+    if is_remove_from_roster:
+        logger.info(fr'Removing user {user_id} from roster {roster_id}')
+        delete_user_duties(user_id=user_id, roster_id=roster_id) # Just in case
+
         if user_id not in user_ids:
+            logger.info(fr'User {user_id} not in roster {roster_id} schedule. Ignoring.')
             return
+
         # Remove existing user day in schedule
         roster = Rosters.find_one_and_update(
             { '_id': roster_id },
@@ -634,7 +658,7 @@ def add_to_roster(update: Update, context: CallbackContext):
 
     query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
 
-    if duty_day == -1:
+    if is_remove_from_roster:
         delete_user_duties(user_id=user_id, roster_id=roster_id)
     else:
         create_user_duties(
