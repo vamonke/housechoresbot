@@ -143,6 +143,21 @@ def delete_user_duties(user_id: int, roster_id: ObjectId):
     logger.info('Bulk delete duties result:')
     logger.info(result.raw_result)
 
+def delete_roster_duties(roster_id: ObjectId):
+    """ Remove all duties from this roster """
+    logger.info(fr'Removing duties from roster_id {roster_id}')
+    now = datetime.datetime.now()
+    today = datetime.datetime(now.year, now.month, now.day)
+    result = Duties.delete_many(
+        {
+            'roster_id': roster_id,
+            'isCompleted': False,
+            'date': { '$gte': today },
+        }
+    )
+    logger.info('Bulk delete duties result:')
+    logger.info(result.raw_result)
+
 def create_user_duties(user_dict: dict, roster: dict, update: Update):
     """Create duties for a user"""
 
@@ -1064,3 +1079,64 @@ def save_chat_group(update: Update, _: CallbackContext):
         )
 
     # create_user(user)
+
+def delete_roster(update: Update, context: CallbackContext):
+    """ Remove roster and duties """
+    user = update.effective_user
+
+    query = update.callback_query
+    query.answer()
+
+    data = update.callback_query.data
+    _, roster_id = data.split(".")
+    roster_id = ObjectId(roster_id)
+    # roster = Rosters.find_one(roster_id)
+    roster = Rosters.find_one_and_delete({
+        '_id': roster_id
+    })
+
+    if roster is None:
+        message = 'Oops! This chore has already been removed.'
+        query.edit_message_text(text=message)
+        return
+
+    # Remove user duties
+    delete_roster_duties(roster_id=roster_id)
+
+    roster_name = roster['name']
+    user_text = user.mention_markdown_v2()
+    message = f"*{roster_name}* has been removed"
+    
+    query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
+    
+def delete_roster_select(update: Update, _: CallbackContext):
+    """ Let user select which roster to delete """
+    # Get user
+    user = update.effective_user
+    user_text = user.mention_markdown_v2()
+    user_id = user.id
+
+    # Get chat id
+    chat_id = update.effective_chat.id
+
+    rosters = Rosters.find(
+        { 'chat_id': chat_id },
+        projection={ 'name': True }
+    )
+    rosters = list(rosters)
+    roster_ids = list(map(lambda r: r['_id'], rosters))
+
+    if not rosters:
+        message = fr'There are no chore rosters 🧐'
+        update.message.reply_markdown_v2(message, quote=False)
+        return
+
+    message = fr'{user_text} which chore roster do you want to delete\?'
+    keyboard = [roster_to_button(r, 'deleteroster') for r in rosters]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_markdown_v2(
+        text=message,
+        reply_markup=reply_markup,
+        quote=False,
+    )

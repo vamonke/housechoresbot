@@ -58,6 +58,8 @@ from commands_v2 import (
     whitelist_user,
     check_whitelist,
     save_chat_group,
+    delete_roster_select,
+    delete_roster,
     GET_ROSTER_NAME,
 )
 
@@ -163,6 +165,7 @@ def add_handlers(dispatcher):
     dispatcher.add_handler(CommandHandler("join", check_whitelist(join_roster_select)))
     dispatcher.add_handler(CommandHandler("dutyroster", check_whitelist(show_rosters)))
     dispatcher.add_handler(CommandHandler("leave", check_whitelist(leave_roster_select)))
+    dispatcher.add_handler(CommandHandler("deleteroster", check_whitelist(delete_roster_select)))
     # dispatcher.add_handler(CommandHandler("reschedule", check_whitelist(reschedule)))
     # dispatcher.add_handler(CommandHandler("editduty", check_whitelist(editduty)))
     # dispatcher.add_handler(CommandHandler("nextduty", check_whitelist(next_duty)))
@@ -183,6 +186,7 @@ def add_handlers(dispatcher):
     dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern='^addtoroster\.'))
     dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern='^rosterdone\.'))
     dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern='^leave\.'))
+    dispatcher.add_handler(CallbackQueryHandler(delete_roster, pattern='^deleteroster\.'))
 
     # Beta message
     dispatcher.add_handler(CommandHandler("welcome", whitelist_user))
@@ -190,8 +194,8 @@ def add_handlers(dispatcher):
     dispatcher.add_handler(ChatMemberHandler(save_chat_group))
 
 def main():
-    updater = Updater(TELEGRAM_TOKEN)
-    # updater = Updater(TEST_TELEGRAM_TOKEN)
+    # updater = Updater(TELEGRAM_TOKEN)
+    updater = Updater(TEST_TELEGRAM_TOKEN)
     dispatcher = updater.dispatcher
     add_handlers(dispatcher)
     updater.start_polling()
