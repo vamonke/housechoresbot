@@ -37,9 +37,9 @@ from commands_v2 import (
     show_duties,
     # create_duties,
     show_rosters,
-    next_duty,
+    # next_duty,
     mark_as_done,
-    remind,
+    # remind,
     get_chat_id,
     # reschedule,
     add_to_waitlist,
@@ -156,12 +156,12 @@ def set_webhook(event, context):
 def add_handlers(dispatcher):
     # Commands
     dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
-    dispatcher.add_handler(CommandHandler("createroster", check_whitelist(create_roster)))
+    dispatcher.add_handler(CommandHandler("addchore", check_whitelist(create_roster)))
     dispatcher.add_handler(MessageHandler(Filters.reply & ~Filters.command, check_whitelist(receive_roster_name)))
     dispatcher.add_handler(CommandHandler("done", check_whitelist(mark_as_done)))
-    dispatcher.add_handler(CommandHandler("duties", check_whitelist(show_duties)))
+    dispatcher.add_handler(CommandHandler("chores", check_whitelist(show_duties)))
     dispatcher.add_handler(CommandHandler("join", check_whitelist(join_roster_select)))
-    dispatcher.add_handler(CommandHandler("rosters", check_whitelist(show_rosters)))
+    dispatcher.add_handler(CommandHandler("dutyroster", check_whitelist(show_rosters)))
     dispatcher.add_handler(CommandHandler("leave", check_whitelist(leave_roster_select)))
     # dispatcher.add_handler(CommandHandler("reschedule", check_whitelist(reschedule)))
     # dispatcher.add_handler(CommandHandler("editduty", check_whitelist(editduty)))
