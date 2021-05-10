@@ -55,6 +55,7 @@ week_days_short = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 GIPHY_API_KEY = '1iI19SCF571Lt9CV2uNsXv3t1CzIRznM'
 
 HOUSE_CHORES_BOT_ID = 1783406286
+DUTY_ROSTER_BOT_ID = 1798724954
 
 GET_ROSTER_NAME = 0
 # JOIN_ROSTER = 1
@@ -286,7 +287,7 @@ def receive_roster_name(update: Update, context: CallbackContext):
     message = update.effective_message
     reply_to_message = message.reply_to_message
     user_to_reply_id = reply_to_message.from_user.id
-    if user_to_reply_id != HOUSE_CHORES_BOT_ID:
+    if user_to_reply_id not in [HOUSE_CHORES_BOT_ID, DUTY_ROSTER_BOT_ID]:
         return
     
     # Check content of create_roster message
@@ -657,7 +658,7 @@ def join_roster_select(update: Update, context: CallbackContext):
 
 def show_duties(update: Update, context: CallbackContext):
     """Shows chat's roster duties for the week"""
-    
+
     # Get chat and roster ids
     chat_id = update.effective_chat.id
     rosters = Rosters.find({ 'chat_id': chat_id }, projection={ 'name': True })
@@ -667,8 +668,8 @@ def show_duties(update: Update, context: CallbackContext):
     # Get date window for duties
     now = datetime.datetime.now()
     today = datetime.datetime(now.year, now.month, now.day)
-    start_of_week = today - datetime.timedelta(days=today.weekday() + 1)
-    end_of_week = start_of_week + datetime.timedelta(weeks=2)
+    start_of_week = today - datetime.timedelta(days=today.weekday())
+    end_of_week = start_of_week + datetime.timedelta(weeks=1)
     # end_of_week = today + datetime.timedelta(days=6)
 
     cursor = Duties.find({
@@ -677,31 +678,34 @@ def show_duties(update: Update, context: CallbackContext):
     }).sort('date')
     duties = list(cursor)
 
-    message = ''
+    duty_date_dict = {}
 
     for roster in rosters:
         roster_duties = list(filter(lambda d: (d['roster_id'] == roster['_id']), duties))
         if roster_duties:
             roster_name = roster['name']
-            message += fr'*{roster_name}*' + '\n'
-            week_number = None
             for duty in roster_duties:
                 user_text = get_name_from_user_id(duty['user'])
-
-                if week_number is None:
-                    week_number = duty['date'].isocalendar()[1]
-                elif duty['date'].isocalendar()[1] > week_number:
-                    # message += '\-\n'
-                    week_number = duty['date'].isocalendar()[1]
-
-                date = duty['date'].strftime("%a %d\/%m")
-                message += fr'`{date}\:` {user_text}'
+                duty_line = fr'\- {roster_name}\: {user_text}'
 
                 if 'isCompleted' in duty and duty['isCompleted']:
-                    message += " ✅"
+                    duty_line += " ✅"
 
-                message += "\n"
-            message += "\n"
+                date = duty['date']
+                if date in duty_date_dict:
+                    duty_date_dict[date].append(duty_line)
+                else:
+                    duty_date_dict[date] = [duty_line]
+
+    message = ''
+    for date in sorted(duty_date_dict):
+        date_str = date.strftime("%a %d\/%m")
+        if today == date:
+            date_str += ' `\(Today\)`'
+        message += fr"*{date_str}*" + "\n"
+        duties = duty_date_dict[date]
+        message += "\n".join(duties)
+        message += "\n\n"
 
     if not message:
         message = "🤷 No chores this week"
