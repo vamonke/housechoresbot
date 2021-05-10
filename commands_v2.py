@@ -82,6 +82,7 @@ def start(update: Update, _: CallbackContext):
     user_text = user.mention_markdown_v2()
     message =  'I\'m a bot that helps you keep track of household chores\.\n\nYou can create chores\, schedule weekly duties and mark them as done\. I also send reminders so you won\'t forget about them 😉\n\nGet started by sending \/addchore to create a chore\.'
     # For more info\, send \/help\.
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(message, quote=False)
 
 def check_whitelist(fn):
@@ -124,6 +125,8 @@ def whitelist_user(update: Update, _: CallbackContext):
     )
 
     message =  fr'🥳 You can now use House Chores Bot'
+
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(message, quote=False)
 
     start(update, None)
@@ -233,6 +236,7 @@ def show_rosters(update: Update, context: CallbackContext):
 
     if not rosters:
         message = "🤷 No chores found\. Send \/addchore to add a chore\."
+        logger.info('Reply message:\n' + message)
         update.message.reply_markdown_v2(message, quote=False)
         return
 
@@ -258,6 +262,7 @@ def show_rosters(update: Update, context: CallbackContext):
         
         message += "\n"
 
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(message, quote=False)
 
 def create_roster(update: Update, context: CallbackContext) -> int:
@@ -268,6 +273,7 @@ def create_roster(update: Update, context: CallbackContext) -> int:
 
     message = user_text + ' what\'s the name of the chore\?\n_\(e\.g\. laundry, mopping, trash\)_'
 
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(
         text=message,
         reply_markup=ForceReply(selective=True),
@@ -321,6 +327,7 @@ def receive_roster_name(update: Update, context: CallbackContext):
     )
 
     message = fr'➕ New chore created: *{name}*'
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(message, quote=False)
 
     roster['_id'] = result['_id']
@@ -329,7 +336,7 @@ def receive_roster_name(update: Update, context: CallbackContext):
 def new_roster_follow_up(update, roster):
     roster_name = roster['name']
     roster_id = roster['_id']
-    text = fr'👋 Hey folks\! Pick which day\(s\) of the week you want to do\: *{roster_name}*'
+    message = fr'👋 Hey folks\! Pick which day\(s\) of the week you want to do\: *{roster_name}*'
     keyboard = [
         [
             InlineKeyboardButton("Mon", callback_data=fr'addtonewroster.{roster_id}.0'),
@@ -345,8 +352,9 @@ def new_roster_follow_up(update, roster):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(
-        text=text,
+        text=message,
         reply_markup=reply_markup,
         quote=False,
     )
@@ -365,6 +373,7 @@ def join_roster(update: Update, context: CallbackContext):
 
     if roster is None:
         message = 'Oops! This chore has been removed. You can create a new chore by sending \/addchore.'
+        logger.info('Edit message:\n' + message)
         query.edit_message_text(text=message)
         return
 
@@ -374,6 +383,7 @@ def join_roster(update: Update, context: CallbackContext):
             message = fr'New chore added: *{name}*' + '\nSend \/join to select a day\!'
         else:
             message = fr'Oops\, something went wrong\!'
+        logger.info('Edit message:\n' + message)
         query.edit_message_text(text=message)
         return
 
@@ -420,6 +430,7 @@ def join_roster(update: Update, context: CallbackContext):
     keyboard = [weekday_buttons, weekend_buttons]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    logger.info('Edit message:\n' + message)
     query.edit_message_text(
         text=message,
         reply_markup=reply_markup,
@@ -439,6 +450,7 @@ def add_to_new_roster(update: Update, context: CallbackContext):
     if roster is None:
         logger.info(fr'Tried to add user to roster {roster_id} but the roster has been removed')
         message = 'Oops! This chore has been removed. You can create a new chore by sending \/addchore.'
+        logger.info('Edit message:\n' + message)
         query.edit_message_text(text=message)
         return
 
@@ -481,6 +493,7 @@ def add_to_new_roster(update: Update, context: CallbackContext):
         # )
         logger.error('Duty day clash!')
         # message = 'Oops! Something went wrong. Please try again later'
+        # logger.info('Edit message:\n' + message)
         # query.edit_message_text(text=message)
         # return
     else:
@@ -532,6 +545,7 @@ def add_to_new_roster(update: Update, context: CallbackContext):
     keyboard = [weekday_buttons, weekend_buttons]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    logger.info('Edit message:\n' + message)
     query.edit_message_text(
         text=message,
         reply_markup=reply_markup,
@@ -558,6 +572,7 @@ def add_to_roster(update: Update, context: CallbackContext):
 
     if roster is None:
         message = 'Oops! This chore has been removed. You can create a new chore by sending \/addchore.'
+        logger.info('Edit message:\n' + message)
         query.edit_message_text(text=message)
         return
 
@@ -611,6 +626,7 @@ def add_to_roster(update: Update, context: CallbackContext):
     else:
         message = f"{user_text} has been removed from *{roster_name}*"
 
+    logger.info('Edit message:\n' + message)
     query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
 
     if is_remove_from_roster:
@@ -650,6 +666,7 @@ def join_roster_select(update: Update, context: CallbackContext):
     keyboard = [roster_to_button(r, 'join') for r in rosters]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(
         text=message,
         reply_markup=reply_markup,
@@ -661,6 +678,7 @@ def show_duties(update: Update, context: CallbackContext):
 
     # Get chat and roster ids
     chat_id = update.effective_chat.id
+    logger.info(fr'Fetching rosters from chat {chat_id}')
     rosters = Rosters.find({ 'chat_id': chat_id }, projection={ 'name': True })
     rosters = list(rosters)
     roster_ids = list(map(lambda r: r['_id'], rosters))
@@ -672,11 +690,13 @@ def show_duties(update: Update, context: CallbackContext):
     end_of_week = start_of_week + datetime.timedelta(weeks=1)
     # end_of_week = today + datetime.timedelta(days=6)
 
+    logger.info(fr'Fetching duties between {start_of_week} and {end_of_week}')
     cursor = Duties.find({
         'roster_id': { '$in': roster_ids },
         'date': { '$gte': start_of_week, '$lte': end_of_week }
     }).sort('date')
     duties = list(cursor)
+    logger.info(fr'Found duties {duties}')
 
     duty_date_dict = {}
 
@@ -710,6 +730,7 @@ def show_duties(update: Update, context: CallbackContext):
     if not message:
         message = "🤷 No chores this week"
 
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(message, quote=False)
 
 def mark_as_done(update: Update, context: CallbackContext):
@@ -760,6 +781,7 @@ def mark_as_done(update: Update, context: CallbackContext):
         roster_name = roster['name']
         message = fr'✅ {user_text} just completed *{roster_name}*\! 👏 👏 👏'
 
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(message, quote=False)
     send_gif(update.message)
 
@@ -786,6 +808,7 @@ def ask_which_roster_done(update: Update):
     keyboard = [roster_to_button(r, 'rosterdone') for r in rosters]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(
         text=message,
         reply_markup=reply_markup,
@@ -858,6 +881,7 @@ def mark_roster_as_done(update: Update, _: CallbackContext):
 
     # message = fr'🧐 No duty scheduled for you {user_text}\.'
     message = fr'✅ {user_text} just completed *{roster_name}*\! 👏 👏 👏'
+    logger.info('Edit message:\n' + message)
     query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
     
     send_gif(query.message)
@@ -880,6 +904,7 @@ def leave_roster(update: Update, context: CallbackContext):
 
     if roster is None:
         message = 'Oops! This chore has been removed.'
+        logger.info('Edit message:\n' + message)
         query.edit_message_text(text=message)
         return
 
@@ -903,6 +928,7 @@ def leave_roster(update: Update, context: CallbackContext):
     user_text = user.mention_markdown_v2()
     message = f"{user_text} has left roster: *{roster_name}*"
     
+    logger.info('Edit message:\n' + message)
     query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
     
 def leave_roster_select(update: Update, context: CallbackContext):
@@ -931,6 +957,7 @@ def leave_roster_select(update: Update, context: CallbackContext):
 
     if not rosters:
         message = fr'{user_text} you are not in any chore roster 🧐'
+        logger.info('Reply message:\n' + message)
         update.message.reply_markdown_v2(message, quote=False)
         return
 
@@ -938,6 +965,7 @@ def leave_roster_select(update: Update, context: CallbackContext):
     keyboard = [roster_to_button(r, 'leave') for r in rosters]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(
         text=message,
         reply_markup=reply_markup,
@@ -966,6 +994,7 @@ def add_to_waitlist(update):
     user_text = user.mention_markdown_v2()
     message = fr"👋 Hello {user_text}\! House Chores Bot is currently in closed beta\. Will let you know when it\'s ready for you 😃"
 
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(message, quote=False)
 
 def user_next_duty(user_dict: dict, roster: dict, update: Update):
@@ -1101,6 +1130,7 @@ def delete_roster(update: Update, context: CallbackContext):
 
     if roster is None:
         message = 'Oops! This chore has already been removed.'
+        logger.info('Edit message:\n' + message)
         query.edit_message_text(text=message)
         return
 
@@ -1111,6 +1141,7 @@ def delete_roster(update: Update, context: CallbackContext):
     user_text = user.mention_markdown_v2()
     message = f"*{roster_name}* has been removed"
     
+    logger.info('Edit message:\n' + message)
     query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
     
 def delete_roster_select(update: Update, _: CallbackContext):
@@ -1132,13 +1163,15 @@ def delete_roster_select(update: Update, _: CallbackContext):
 
     if not rosters:
         message = fr'There are no chore rosters 🧐'
+        logger.info('Reply message:\n' + message)
         update.message.reply_markdown_v2(message, quote=False)
         return
 
     message = fr'{user_text} which chore roster do you want to delete\?'
     keyboard = [roster_to_button(r, 'deleteroster') for r in rosters]
     reply_markup = InlineKeyboardMarkup(keyboard)
-
+    
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(
         text=message,
         reply_markup=reply_markup,
