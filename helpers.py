@@ -1,14 +1,13 @@
-
-import random
-import requests
+# import random
+# import requests
 import os
-import json
-import datetime
-from bson.objectid import ObjectId
-from urllib.parse import urlencode
+# import json
+# import datetime
+# from bson.objectid import ObjectId
+# from urllib.parse import urlencode
 
 from telegram import (
-    Update,
+    # Update,
     Bot,
     User,
     constants
@@ -43,8 +42,8 @@ chat_properties = [
 VAMONKE_ID = 265435469
 
 # TELEGRAM_TOKEN = '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
-TELEGRAM_TOKEN = '1798724954:AAGuKOTuVWX8qfuRLUx1EU82Di9czAR6kFs'
-TEST_TELEGRAM_TOKEN = '1798724954:AAGuKOTuVWX8qfuRLUx1EU82Di9czAR6kFs'
+TELEGRAM_TOKEN = '1798724954:AAEadvyQikDry8r1Qy0CyPDL__iRLRi0at8'
+TEST_TELEGRAM_TOKEN = '1798724954:AAEadvyQikDry8r1Qy0CyPDL__iRLRi0at8'
 
 ENVIRONMENT = os.environ.get('ENVIRONMENT')
 IS_DEV = ENVIRONMENT is not 'prod'

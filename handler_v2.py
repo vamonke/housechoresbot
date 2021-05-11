@@ -1,19 +1,16 @@
-import random
-import pymongo
+# import random
+# import pymongo
 import logging
-import requests
+# import requests
 import os
 import json
-import datetime
-import pprint
-from urllib.parse import urlencode
-
-from queue import Queue
-from threading import Thread
+# import datetime
+# import pprint
+# from urllib.parse import urlencode
 
 from telegram import (
     Update,
-    Bot,
+    # Bot,
     # User,
     # InlineKeyboardMarkup,
     # InlineKeyboardButton,
@@ -25,7 +22,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     ChatMemberHandler,
     CommandHandler,
-    ConversationHandler,
+    # ConversationHandler,
     Dispatcher,
     Filters,
     MessageHandler,
@@ -89,7 +86,7 @@ ERROR_RESPONSE = {
 logger = logging.getLogger(__name__)
 
 TELEGRAM_TOKEN = '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
-TEST_TELEGRAM_TOKEN = '1798724954:AAGuKOTuVWX8qfuRLUx1EU82Di9czAR6kFs'
+TEST_TELEGRAM_TOKEN = '1798724954:AAEadvyQikDry8r1Qy0CyPDL__iRLRi0at8'
 
 ENVIRONMENT = os.environ.get('ENVIRONMENT')
 IS_DEV = ENVIRONMENT is not 'prod'
@@ -181,20 +178,28 @@ def add_handlers(dispatcher):
     # dispatcher.add_handler(conv_handler)
 
     # Callback handlers
-    dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern='^(joinnewroster|join)\.'))
-    dispatcher.add_handler(CallbackQueryHandler(add_to_new_roster, pattern='^addtonewroster\.'))
-    dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern='^addtoroster\.'))
-    dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern='^rosterdone\.'))
-    dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern='^leave\.'))
-    dispatcher.add_handler(CallbackQueryHandler(delete_roster, pattern='^deleteroster\.'))
+    dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern=r'^(joinnewroster|join)\.'))
+    dispatcher.add_handler(CallbackQueryHandler(add_to_new_roster, pattern=r'^addtonewroster\.'))
+    dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern=r'^addtoroster\.'))
+    dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern=r'^rosterdone\.'))
+    dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern=r'^leave\.'))
+    dispatcher.add_handler(CallbackQueryHandler(delete_roster, pattern=r'^deleteroster\.'))
 
     # Beta message
     dispatcher.add_handler(CommandHandler("welcome", whitelist_user))
     # dispatcher.add_handler(MessageHandler(blacklisted_filter, send_beta_v2))
     dispatcher.add_handler(ChatMemberHandler(save_chat_group))
 
-def main():
-    # updater = Updater(TELEGRAM_TOKEN)
+# def main_prod():
+#     logger.info('Running HouseChoresBot')
+#     updater = Updater(TELEGRAM_TOKEN)
+#     dispatcher = updater.dispatcher
+#     add_handlers(dispatcher)
+#     updater.start_polling()
+#     updater.idle()
+
+def main_dev():
+    logger.info('Running DutyRosterBot')
     updater = Updater(TEST_TELEGRAM_TOKEN)
     dispatcher = updater.dispatcher
     add_handlers(dispatcher)
@@ -213,6 +218,6 @@ def dev():
     dispatcher.process_update(update)
 
 if __name__ == '__main__':
-    main()
+    main_dev()
     # dev()
     # routine(None, None)
