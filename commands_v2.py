@@ -46,6 +46,7 @@ from helpers import (
     get_chat_dict_from_chat,
     get_is_whitelisted,
     alert_creator,
+    configure_telegram,
 )
 
 from logger import logger
@@ -64,6 +65,8 @@ GET_ROSTER_NAME = 0
 
 WEEKS_IN_ADVANCE = 2
 
+INTRO_MESSAGE = 'I\'m a bot that helps you keep track of household chores\.\n\nYou can create chores\, schedule weekly duties and mark them as done\. I also send reminders so you won\'t forget about them 😉\n\nGet started by sending \/addchore to create a chore\.'
+
 def start(update: Update, _: CallbackContext):
     """ Create chat and user """
     user = update.effective_user
@@ -81,7 +84,7 @@ def start(update: Update, _: CallbackContext):
     create_user(user)
 
     # user_text = user.mention_markdown_v2()
-    message =  r'I\'m a bot that helps you keep track of household chores\.\n\nYou can create chores\, schedule weekly duties and mark them as done\. I also send reminders so you won\'t forget about them 😉\n\nGet started by sending \/addchore to create a chore\.'
+    message = INTRO_MESSAGE
     # For more info\, send \/help\.
     logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(message, quote=False)
@@ -240,7 +243,7 @@ def show_rosters(update: Update, _: CallbackContext):
     rosters = list(rosters)
 
     if not rosters:
-        message = r"🤷 No chores found\. Send \/addchore to add a chore\."
+        message = r"🤷 No chores found\. Send \/addchore to create a weekly chore\."
         logger.info('Reply message:\n' + message)
         update.message.reply_markdown_v2(message, quote=False)
         return
@@ -276,7 +279,7 @@ def create_roster(update: Update, _: CallbackContext) -> int:
     user = update.effective_user
     user_text = user.mention_markdown_v2()
 
-    message = user_text + r' what\'s the name of the chore\?\n_\(e\.g\. laundry, mopping, trash\)_'
+    message = user_text + ' what\'s the name of the chore\?\n_\(e\.g\. laundry, mopping, trash\)_'
 
     logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(
@@ -336,6 +339,7 @@ def receive_roster_name(update: Update, _: CallbackContext):
     update.message.reply_markdown_v2(message, quote=False)
 
     roster['_id'] = result['_id']
+    time.sleep(1)
     new_roster_follow_up(update, roster)
 
 def new_roster_follow_up(update, roster):
@@ -377,7 +381,7 @@ def join_roster(update: Update, _: CallbackContext):
     roster = Rosters.find_one(ObjectId(roster_id))
 
     if roster is None:
-        message = 'Oops! This chore has been removed. You can create a new chore by sending /addchore.'
+        message = 'Oops! This chore has been removed. You can create a new weekly chore by sending /addchore.'
         logger.info('Edit message:\n' + message)
         query.edit_message_text(text=message)
         return
@@ -451,7 +455,7 @@ def add_to_new_roster(update: Update, _: CallbackContext):
 
     if roster is None:
         logger.info(f'Tried to add user to roster {roster_id} but the roster has been removed')
-        message = 'Oops! This chore has been removed. You can create a new chore by sending /addchore.'
+        message = 'Oops! This chore has been removed. You can create a new weekly chore by sending /addchore.'
         logger.info('Edit message:\n' + message)
         query.edit_message_text(text=message)
         return
@@ -576,7 +580,7 @@ def add_to_roster(update: Update, _: CallbackContext):
     roster = Rosters.find_one(roster_id)
 
     if roster is None:
-        message = 'Oops! This chore has been removed. You can create a new chore by sending /addchore.'
+        message = 'Oops! This chore has been removed. You can create a new weekly chore by sending /addchore.'
         logger.info('Edit message:\n' + message)
         query.edit_message_text(text=message)
         return
@@ -1033,6 +1037,7 @@ def user_next_duty(user_dict: dict, roster: dict, update: Update):
 
     if duty_date == today:
         message = fr'📅 {user_text} you have a duty today: *{roster_name}*\. Send \/done once you\'ve completed your chore 👍'
+        logger.info('Callback query message:\n' + message)
         update.callback_query.message.reply_markdown_v2(message, quote=False)
     # elif duty_date == today + datetime.timedelta(days=1):
     #     message = fr'📅 {user_text}: Your next *{roster_name}* duty is tomorrow'
@@ -1098,7 +1103,7 @@ def save_chat_group(update: Update, _: CallbackContext):
     message = fr'Bot status\: `{status}` in {chat_title} by {user_text}'
     alert_creator(message)
 
-    if status is constants.CHATMEMBER_MEMBER:
+    if status == constants.CHATMEMBER_MEMBER:
         chat_dict = get_chat_dict_from_chat(chat)
         chat_dict['addedBy'] = user_id
         # chat_dict['isWhitelisted'] = True
@@ -1107,6 +1112,8 @@ def save_chat_group(update: Update, _: CallbackContext):
             { '$set': chat_dict },
             upsert=True
         )
+        time.sleep(1)
+        send_intro(update)
     elif status in [constants.CHATMEMBER_KICKED, constants.CHATMEMBER_LEFT]:
         Chats.update_one(
             { 'id': chat_id },
@@ -1114,6 +1121,22 @@ def save_chat_group(update: Update, _: CallbackContext):
         )
 
     # create_user(user)
+
+def send_intro(update: Update):
+    logger.info('Sending self introduction')
+
+    chat = update.effective_chat
+    chat_id = chat.id
+
+    message = INTRO_MESSAGE
+    logger.info('Send message:\n' + message)
+
+    bot = configure_telegram()
+    bot.send_message(
+        chat_id=chat_id,
+        text=message,
+        parse_mode=constants.PARSEMODE_MARKDOWN_V2,
+    )
 
 def delete_roster(update: Update, _: CallbackContext):
     """ Remove roster and duties """

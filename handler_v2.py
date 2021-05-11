@@ -167,16 +167,6 @@ def add_handlers(dispatcher):
     # dispatcher.add_handler(CommandHandler("editduty", check_whitelist(editduty)))
     # dispatcher.add_handler(CommandHandler("nextduty", check_whitelist(next_duty)))
 
-    # Create roster conversation
-    # conv_handler = ConversationHandler(
-    #     entry_points=[CommandHandler('createroster', check_whitelist(create_roster))],
-    #     states={
-    #         GET_ROSTER_NAME: [MessageHandler(Filters.text & ~Filters.command, receive_roster_name)],
-    #     },
-    #     fallbacks=[CommandHandler('cancel', cancel)],
-    # )
-    # dispatcher.add_handler(conv_handler)
-
     # Callback handlers
     dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern=r'^(joinnewroster|join)\.'))
     dispatcher.add_handler(CallbackQueryHandler(add_to_new_roster, pattern=r'^addtonewroster\.'))
@@ -190,13 +180,13 @@ def add_handlers(dispatcher):
     # dispatcher.add_handler(MessageHandler(blacklisted_filter, send_beta_v2))
     dispatcher.add_handler(ChatMemberHandler(save_chat_group))
 
-# def main_prod():
-#     logger.info('Running HouseChoresBot')
-#     updater = Updater(TELEGRAM_TOKEN)
-#     dispatcher = updater.dispatcher
-#     add_handlers(dispatcher)
-#     updater.start_polling()
-#     updater.idle()
+def main_prod():
+    logger.info('Running HouseChoresBot')
+    updater = Updater(TELEGRAM_TOKEN)
+    dispatcher = updater.dispatcher
+    add_handlers(dispatcher)
+    updater.start_polling()
+    updater.idle()
 
 def main_dev():
     logger.info('Running DutyRosterBot')
@@ -207,7 +197,11 @@ def main_dev():
     updater.idle()
 
 def dev():
-    body = {'update_id': 136580227, 'my_chat_member': {'chat': {'id': -463862443, 'type': 'group', 'title': 'CHATBOT TEST', 'all_members_are_administrators': True}, 'date': 1620411340, 'old_chat_member': {'user': {'id': 1798724954, 'first_name': 'Duty Roster Bot', 'is_bot': True, 'username': 'DutyRosterBot'}, 'status': 'member', 'until_date': None}, 'new_chat_member': {'user': {'id': 1798724954, 'first_name': 'Duty Roster Bot', 'is_bot': True, 'username': 'DutyRosterBot'}, 'status': 'left', 'until_date': None}, 'from': {'id': 265435469, 'first_name': 'Varick', 'is_bot': False, 'last_name': 'Lim', 'username': 'vamonke', 'language_code': 'en'}}}
+    # body = {'update_id': 136580227, 'my_chat_member': {'chat': {'id': -463862443, 'type': 'group', 'title': 'CHATBOT TEST', 'all_members_are_administrators': True}, 'date': 1620411340, 'old_chat_member': {'user': {'id': 1798724954, 'first_name': 'Duty Roster Bot', 'is_bot': True, 'username': 'DutyRosterBot'}, 'status': 'member', 'until_date': None}, 'new_chat_member': {'user': {'id': 1798724954, 'first_name': 'Duty Roster Bot', 'is_bot': True, 'username': 'DutyRosterBot'}, 'status': 'left', 'until_date': None}, 'from': {'id': 265435469, 'first_name': 'Varick', 'is_bot': False, 'last_name': 'Lim', 'username': 'vamonke', 'language_code': 'en'}}}
+
+    # body = {'update_id': 628043835, 'my_chat_member': {'chat': {'id': -546239907, 'type': 'group', 'title': 'HouseChoresBot with Athena', 'all_members_are_administrators': True}, 'date': 1620739803, 'old_chat_member': {'user': {'id': 1783406286, 'first_name': 'House Chores Bot', 'is_bot': True, 'username': 'HouseChoresBot'}, 'status': 'left', 'until_date': None}, 'new_chat_member': {'user': {'id': 1783406286, 'first_name': 'House Chores Bot', 'is_bot': True, 'username': 'HouseChoresBot'}, 'status': 'member', 'until_date': None}, 'from': {'id': 265435469, 'first_name': 'Varick', 'is_bot': False, 'last_name': 'Lim', 'username': 'vamonke', 'language_code': 'en'}}}
+
+    body = {'update_id': 628043862, 'message': {'message_id': 1820, 'from': {'id': 211260559, 'is_bot': False, 'first_name': 'Henry', 'last_name': 'Morco', 'username': 'henrymorco', 'language_code': 'en'}, 'chat': {'id': 211260559, 'first_name': 'Henry', 'last_name': 'Morco', 'username': 'henrymorco', 'type': 'private'}, 'date': 1620749440, 'text': '/start', 'entities': [{'offset': 0, 'length': 6, 'type': 'bot_command'}]}}
     
     # Create bot and dispatcher instances
     bot = configure_telegram()
@@ -218,6 +212,7 @@ def dev():
     dispatcher.process_update(update)
 
 if __name__ == '__main__':
-    main_dev()
-    # dev()
+    # main_dev()
+    # main_prod()
+    dev()
     # routine(None, None)
