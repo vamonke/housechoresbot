@@ -1,6 +1,7 @@
 import random
 import requests
 import pymongo
+import time
 # import os
 # import json
 import datetime
@@ -221,7 +222,14 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
     logger.info('Bulk create duties result:')
     logger.info(result.bulk_api_result)
 
+    time.sleep(1) # Wait for 1 second
     user_next_duty(user_dict, roster, update)
+
+def send_chores_tip(update: Update):
+    """ Send /chores tiip """
+    
+    message = '💡 Tip: Send /chores to view upcoming chores'
+    update.effective_message.reply_markdown_v2(message, quote=False)
 
 def show_rosters(update: Update, _: CallbackContext):
     """Shows rosters in chat"""
@@ -552,6 +560,9 @@ def add_to_new_roster(update: Update, _: CallbackContext):
             roster=roster,
             update=update
         )
+        if len(roster['schedule']) == 1:
+            time.sleep(1) # Wait for 1 second
+            send_chores_tip(update)
 
 def add_to_roster(update: Update, _: CallbackContext):
     """Add user to duty roster"""
