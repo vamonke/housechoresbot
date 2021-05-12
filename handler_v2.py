@@ -197,11 +197,7 @@ def main_dev():
     updater.idle()
 
 def dev():
-    # body = {'update_id': 136580227, 'my_chat_member': {'chat': {'id': -463862443, 'type': 'group', 'title': 'CHATBOT TEST', 'all_members_are_administrators': True}, 'date': 1620411340, 'old_chat_member': {'user': {'id': 1798724954, 'first_name': 'Duty Roster Bot', 'is_bot': True, 'username': 'DutyRosterBot'}, 'status': 'member', 'until_date': None}, 'new_chat_member': {'user': {'id': 1798724954, 'first_name': 'Duty Roster Bot', 'is_bot': True, 'username': 'DutyRosterBot'}, 'status': 'left', 'until_date': None}, 'from': {'id': 265435469, 'first_name': 'Varick', 'is_bot': False, 'last_name': 'Lim', 'username': 'vamonke', 'language_code': 'en'}}}
-
-    # body = {'update_id': 628043835, 'my_chat_member': {'chat': {'id': -546239907, 'type': 'group', 'title': 'HouseChoresBot with Athena', 'all_members_are_administrators': True}, 'date': 1620739803, 'old_chat_member': {'user': {'id': 1783406286, 'first_name': 'House Chores Bot', 'is_bot': True, 'username': 'HouseChoresBot'}, 'status': 'left', 'until_date': None}, 'new_chat_member': {'user': {'id': 1783406286, 'first_name': 'House Chores Bot', 'is_bot': True, 'username': 'HouseChoresBot'}, 'status': 'member', 'until_date': None}, 'from': {'id': 265435469, 'first_name': 'Varick', 'is_bot': False, 'last_name': 'Lim', 'username': 'vamonke', 'language_code': 'en'}}}
-
-    body = {'update_id': 628043862, 'message': {'message_id': 1820, 'from': {'id': 211260559, 'is_bot': False, 'first_name': 'Henry', 'last_name': 'Morco', 'username': 'henrymorco', 'language_code': 'en'}, 'chat': {'id': 211260559, 'first_name': 'Henry', 'last_name': 'Morco', 'username': 'henrymorco', 'type': 'private'}, 'date': 1620749440, 'text': '/start', 'entities': [{'offset': 0, 'length': 6, 'type': 'bot_command'}]}}
+    body = {'update_id': 136580227, 'my_chat_member': {'chat': {'id': -463862443, 'type': 'group', 'title': 'CHATBOT TEST', 'all_members_are_administrators': True}, 'date': 1620411340, 'old_chat_member': {'user': {'id': 1798724954, 'first_name': 'Duty Roster Bot', 'is_bot': True, 'username': 'DutyRosterBot'}, 'status': 'member', 'until_date': None}, 'new_chat_member': {'user': {'id': 1798724954, 'first_name': 'Duty Roster Bot', 'is_bot': True, 'username': 'DutyRosterBot'}, 'status': 'left', 'until_date': None}, 'from': {'id': 265435469, 'first_name': 'Varick', 'is_bot': False, 'last_name': 'Lim', 'username': 'vamonke', 'language_code': 'en'}}}
     
     # Create bot and dispatcher instances
     bot = configure_telegram()
@@ -211,8 +207,8 @@ def dev():
     update = Update.de_json(body, bot)
     dispatcher.process_update(update)
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
     # main_dev()
     # main_prod()
-    dev()
+    # dev()
     # routine(None, None)

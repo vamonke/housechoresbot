@@ -313,7 +313,7 @@ def receive_roster_name(update: Update, _: CallbackContext):
     name = update.message.text
     user = update.effective_user
 
-    logger.info("Creating roster {name} by {user.id}")
+    logger.info(f"Creating roster {name} by {user.id}")
 
     roster = {
         'name': name,
@@ -401,8 +401,8 @@ def join_roster(update: Update, _: CallbackContext):
         message += fr'Current schedule for *{roster_name}*\:' + "\n"
 
     for user_schedule in sorted(roster_schedule, key=lambda us: us['dutyDay']):
-        user = User(**user_schedule)
-        user_text = user.mention_markdown_v2()
+        roster_user = User(**user_schedule)
+        user_text = roster_user.mention_markdown_v2()
         duty_day = user_schedule['dutyDay']
         day = week_days_short[duty_day]
         message += fr'`{day}\:` {user_text}' + "\n"
@@ -447,6 +447,10 @@ def add_to_new_roster(update: Update, _: CallbackContext):
     """Add user to new duty roster"""
     query = update.callback_query
     query.answer()
+
+    user = update.effective_user
+    logger.info(f"Create user {user.id}")
+    create_user(user)
 
     data = update.callback_query.data
     _, roster_id, duty_day = data.split(".")
@@ -625,13 +629,14 @@ def add_to_roster(update: Update, _: CallbackContext):
         )
 
     roster_schedule = roster['schedule']
-    duty_days_long = [("*" + week_days[us['dutyDay']] + "*") for us in roster_schedule]
+    user_roster_schedule = filter(lambda us: us['id'] == user_id, roster_schedule)
+    duty_days_long = [("*" + week_days[us['dutyDay']] + "*") for us in user_roster_schedule]
     days_str = ", ".join(duty_days_long)
     roster_name = roster['name']
     user_text = user.mention_markdown_v2()
 
     if days_str:
-        message = f"{user_text} has chosen to do *{roster_name}* on {days_str} 👌"
+        message = f"{user_text} has chosen to do *{roster_name}* on {days_str} 👌\nI\'ll send reminder in the morning so you won\'t miss it\."
     else:
         message = f"{user_text} has been removed from *{roster_name}*"
 
@@ -653,6 +658,7 @@ def create_user(user, whitelist=True):
     user_dict['createdAt'] = datetime.datetime.now()
     user_dict['isWhitelisted'] = whitelist
 
+    logger.info(f"Upsert user {user_dict}")
     Users.find_one_and_update(
         { 'id': user_dict['id'] },
         { '$setOnInsert': user_dict },
@@ -758,18 +764,17 @@ def mark_as_done(update: Update, _: CallbackContext):
     window_end = today + datetime.timedelta(days=1)
 
     # Find uncompleted duty in date window
+    logger.info(f'Fetching incomplete duties with chat_id {chat_id} user_id {user.id} between {window_start} and {window_end}')
     incomplete_duties = Duties.find({
         'chat_id': chat_id,
         'user': user.id,
         'isCompleted': False,
-        'date': { '$gte': window_start, '$lt': window_end }
+        'date': { '$gte': window_start, '$lte': window_end }
     }, sort=[('date', 1)])
     incomplete_duties = list(incomplete_duties)
+    logger.info(fr'Found incomplete duties {incomplete_duties}')
 
-    if not incomplete_duties:
-        ask_which_roster_done(update)
-        return
-    elif len(incomplete_duties) > 1:
+    if len(incomplete_duties) != 1:
         ask_which_roster_done(update)
         return
     
@@ -853,7 +858,7 @@ def mark_roster_as_done(update: Update, _: CallbackContext):
         'chat_id': chat_id,
         'user': user.id,
         'isCompleted': False,
-        'date': { '$gte': window_start, '$lt': window_end }
+        'date': { '$gte': window_start, '$lte': window_end }
     }, sort=[('date', 1)])
 
     if incomplete_duty:
