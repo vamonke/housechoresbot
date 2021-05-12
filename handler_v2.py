@@ -208,7 +208,7 @@ def dev():
     dispatcher.process_update(update)
 
 # if __name__ == '__main__':
+#     main_prod()
     # main_dev()
-    # main_prod()
     # dev()
     # routine(None, None)

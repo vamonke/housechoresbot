@@ -195,9 +195,9 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
     day = user_dict['dutyDay']
     date = start_of_cycle + datetime.timedelta(days=day)
     while (date < end_of_cycle):
-        if (date < today):
-            date += datetime.timedelta(weeks=1)
-            continue
+        # if (date < today):
+        #     date += datetime.timedelta(weeks=1)
+        #     continue
         request = pymongo.UpdateOne(
             {
                 'user': user_id,
@@ -231,7 +231,7 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
 def send_chores_tip(update: Update):
     """ Send /chores tiip """
     
-    message = '💡 Tip: Send /chores to view upcoming chores'
+    message = '💡 Tip: Send /chores to view this week\'s chores'
     update.effective_message.reply_markdown_v2(message, quote=False)
 
 def show_rosters(update: Update, _: CallbackContext):
@@ -248,7 +248,6 @@ def show_rosters(update: Update, _: CallbackContext):
         update.message.reply_markdown_v2(message, quote=False)
         return
 
-    # breakpoint()
     message = ''
 
     for roster in rosters:
@@ -336,11 +335,24 @@ def receive_roster_name(update: Update, _: CallbackContext):
 
     message = fr'➕ New chore created: *{name}*'
     logger.info('Reply message:\n' + message)
-    update.message.reply_markdown_v2(message, quote=False)
 
-    roster['_id'] = result['_id']
-    time.sleep(1)
-    new_roster_follow_up(update, roster)
+    roster_id = result['_id']
+    button_text = fr'Select day'
+    callback_data = fr'joinnewroster.{roster_id}'
+    keyboard = [[InlineKeyboardButton(button_text, callback_data=callback_data)]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_markdown_v2(
+        text=message,
+        quote=False,
+        reply_markup=reply_markup
+    )
+
+    # update.message.reply_markdown_v2(message, quote=False)
+
+    # roster['_id'] = roster_id
+    # time.sleep(1)
+    # new_roster_follow_up(update, roster)
 
 def new_roster_follow_up(update, roster):
     roster_name = roster['name']
@@ -369,16 +381,19 @@ def new_roster_follow_up(update, roster):
     )
 
 def join_roster(update: Update, _: CallbackContext):
-    """Let user select duty day for roster"""
+    """ /join: Let user select duty day for roster """
     user = update.effective_user
+    user_id = user.id
     create_user(user)
 
     query = update.callback_query
     query.answer()
 
     data = update.callback_query.data
-    _, roster_id = data.split(".")
+    join_type, roster_id = data.split(".")
     roster = Rosters.find_one(ObjectId(roster_id))
+
+    is_join_new_roster = join_type == 'joinnewroster'
 
     if roster is None:
         message = 'Oops! This chore has been removed. You can create a new weekly chore by sending /addchore.'
@@ -397,8 +412,10 @@ def join_roster(update: Update, _: CallbackContext):
     roster_schedule = roster['schedule']
 
     message = ''
+    user_already_in_roster = False
+
     if roster_schedule:
-        message += fr'Current schedule for *{roster_name}*\:' + "\n"
+        message += fr'*{roster_name}*' + "\n"
 
     for user_schedule in sorted(roster_schedule, key=lambda us: us['dutyDay']):
         roster_user = User(**user_schedule)
@@ -406,8 +423,14 @@ def join_roster(update: Update, _: CallbackContext):
         duty_day = user_schedule['dutyDay']
         day = week_days_short[duty_day]
         message += fr'`{day}\:` {user_text}' + "\n"
-    
-    message += '\n' + fr'{user.mention_markdown_v2()} which day do you wanna do\: *{roster_name}*\?'
+
+        if roster_user.id == user_id:
+            user_already_in_roster = True
+
+    if user_already_in_roster:
+        message += '\n' + fr'{user.mention_markdown_v2()} which additional day do you wanna do *{roster_name}*\?'
+    else:
+        message += '\n' + fr'{user.mention_markdown_v2()} which day do you wanna do\: *{roster_name}*\?'
 
     selected_duty_days = [us['dutyDay'] for us in roster_schedule]
 
@@ -428,20 +451,28 @@ def join_roster(update: Update, _: CallbackContext):
             InlineKeyboardButton(weekend, callback_data=fr'addtoroster.{roster_id}.{day_of_week}')
         )
 
-    if selected_duty_days:
-        weekend_buttons.append(
-            InlineKeyboardButton("Remove me", callback_data=fr'addtoroster.{roster_id}.-1')
-        )
+    extra_buttons = []
+    extra_buttons.append(
+        InlineKeyboardButton("Cancel", callback_data=fr'addtoroster.{roster_id}.-2')
+    )
 
-    keyboard = [weekday_buttons, weekend_buttons]
+    keyboard = [weekday_buttons, weekend_buttons, extra_buttons]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    logger.info('Edit message:\n' + message)
-    query.edit_message_text(
-        text=message,
-        reply_markup=reply_markup,
-        parse_mode=constants.PARSEMODE_MARKDOWN_V2,
-    )
+    if is_join_new_roster:
+        logger.info('Callback query message:\n' + message)
+        update.callback_query.message.reply_markdown_v2(
+            text=message,
+            reply_markup=reply_markup,
+            quote=False,
+        )
+    else:
+        logger.info('Edit message:\n' + message)
+        query.edit_message_text(
+            text=message,
+            reply_markup=reply_markup,
+            parse_mode=constants.PARSEMODE_MARKDOWN_V2,
+        )
 
 def add_to_new_roster(update: Update, _: CallbackContext):
     """Add user to new duty roster"""
@@ -549,7 +580,7 @@ def add_to_new_roster(update: Update, _: CallbackContext):
 
     if selected_duty_days:
         weekend_buttons.append(
-            InlineKeyboardButton("Remove me", callback_data=fr'addtonewroster.{roster_id}.-1')
+            InlineKeyboardButton("None", callback_data=fr'addtonewroster.{roster_id}.-1')
         )
 
     keyboard = [weekday_buttons, weekend_buttons]
@@ -599,8 +630,13 @@ def add_to_roster(update: Update, _: CallbackContext):
     user_ids = [us['id'] for us in roster_schedule]
 
     is_remove_from_roster = duty_day == -1
+    is_cancel = duty_day == -2
 
-    if is_remove_from_roster:
+    if is_cancel:
+        logger.info('Cancelled. Deleting message')
+        update.callback_query.message.delete()
+        return
+    elif is_remove_from_roster:
         logger.info(fr'Removing user {user_id} from roster {roster_id}')
         delete_user_duties(user_id=user_id, roster_id=roster_id) # Just in case
 
@@ -636,7 +672,8 @@ def add_to_roster(update: Update, _: CallbackContext):
     user_text = user.mention_markdown_v2()
 
     if days_str:
-        message = f"{user_text} has chosen to do *{roster_name}* on {days_str} 👌\nI\'ll send reminder in the morning so you won\'t miss it\."
+        message = f"{user_text} has chosen to do *{roster_name}* on {days_str} 👌"
+        message += "\nI\'ll send a reminder in the morning so you won\'t miss it\."
     else:
         message = f"{user_text} has been removed from *{roster_name}*"
 
@@ -651,6 +688,10 @@ def add_to_roster(update: Update, _: CallbackContext):
             roster=roster,
             update=update
         )
+
+    if days_str:
+        time.sleep(2)
+        send_chores_tip(update)
 
 def create_user(user, whitelist=True):
     """Create user with upsert."""
@@ -732,6 +773,7 @@ def show_duties(update: Update, _: CallbackContext):
                     duty_date_dict[date] = [duty_line]
 
     message = ''
+
     for date in sorted(duty_date_dict):
         date_str = date.strftime("%a %d/%m")
         if today == date:
@@ -741,7 +783,9 @@ def show_duties(update: Update, _: CallbackContext):
         message += "\n".join(duties)
         message += "\n\n"
 
-    if not message:
+    if message:
+        message = "This week\'s chores\n\n" + message
+    else:
         message = "🤷 No chores this week"
 
     logger.info('Reply message:\n' + message)
