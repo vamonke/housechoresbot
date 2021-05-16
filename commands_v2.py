@@ -47,12 +47,11 @@ from helpers import (
     get_is_whitelisted,
     alert_creator,
     configure_telegram,
+    week_days,
+    week_days_short,
 )
 
 from logger import logger
-
-week_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-week_days_short = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 GIPHY_API_KEY = '1iI19SCF571Lt9CV2uNsXv3t1CzIRznM'
 
@@ -272,7 +271,7 @@ def show_rosters(update: Update, _: CallbackContext):
     logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(message, quote=False)
 
-def create_roster(update: Update, _: CallbackContext) -> int:
+def create_roster(update: Update, _: CallbackContext):
     """Ask for roster name when the command /addchore is issued."""
 
     user = update.effective_user
@@ -286,8 +285,6 @@ def create_roster(update: Update, _: CallbackContext) -> int:
         reply_markup=ForceReply(selective=True),
         quote=False,
     )
-
-    return GET_ROSTER_NAME
 
 def receive_roster_name(update: Update, _: CallbackContext):
     """Create roster with chat_id and name"""
@@ -333,15 +330,37 @@ def receive_roster_name(update: Update, _: CallbackContext):
         return_document=pymongo.ReturnDocument.AFTER,
     )
 
-    message = fr'➕ New chore created: *{name}*'
-    logger.info('Reply message:\n' + message)
+
+    user_text = user.mention_markdown_v2()
+
+    message = fr'Add chore: *{name}*' + '\n'
+    message += fr'{user_text} Choose a day to perform this chore'
 
     roster_id = result['_id']
-    button_text = fr'Select day'
-    callback_data = fr'joinnewroster.{roster_id}'
-    keyboard = [[InlineKeyboardButton(button_text, callback_data=callback_data)]]
+    # button_text = fr'Select day'
+    # callback_data = fr'joinnewroster.{roster_id}'
+    # keyboard = [[InlineKeyboardButton(button_text, callback_data=callback_data)]]
+    # reply_markup = InlineKeyboardMarkup(keyboard)
+
+    keyboard = [
+        [
+            InlineKeyboardButton("Mon", callback_data=fr'newchoreday.{roster_id}.0'),
+            InlineKeyboardButton("Tue", callback_data=fr'newchoreday.{roster_id}.1'),
+            InlineKeyboardButton("Wed", callback_data=fr'newchoreday.{roster_id}.2'),
+            InlineKeyboardButton("Thu", callback_data=fr'newchoreday.{roster_id}.3'),
+            InlineKeyboardButton("Fri", callback_data=fr'newchoreday.{roster_id}.4'),
+        ],
+        [
+            InlineKeyboardButton("Sat", callback_data=fr'newchoreday.{roster_id}.5'),
+            InlineKeyboardButton("Sun", callback_data=fr'newchoreday.{roster_id}.6'),
+        ],
+        [
+            InlineKeyboardButton("Cancel", callback_data=fr'cancel'),
+        ],
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(
         text=message,
         quote=False,
@@ -453,7 +472,7 @@ def join_roster(update: Update, _: CallbackContext):
 
     extra_buttons = []
     extra_buttons.append(
-        InlineKeyboardButton("Cancel", callback_data=fr'addtoroster.{roster_id}.-2')
+        InlineKeyboardButton("Cancel", callback_data=fr'cancel')
     )
 
     keyboard = [weekday_buttons, weekend_buttons, extra_buttons]
@@ -480,7 +499,6 @@ def add_to_new_roster(update: Update, _: CallbackContext):
     query.answer()
 
     user = update.effective_user
-    logger.info(f"Create user {user.id}")
     create_user(user)
 
     data = update.callback_query.data
@@ -630,13 +648,8 @@ def add_to_roster(update: Update, _: CallbackContext):
     user_ids = [us['id'] for us in roster_schedule]
 
     is_remove_from_roster = duty_day == -1
-    is_cancel = duty_day == -2
 
-    if is_cancel:
-        logger.info('Cancelled. Deleting message')
-        update.callback_query.message.delete()
-        return
-    elif is_remove_from_roster:
+    if is_remove_from_roster:
         logger.info(fr'Removing user {user_id} from roster {roster_id}')
         delete_user_duties(user_id=user_id, roster_id=roster_id) # Just in case
 
@@ -695,6 +708,8 @@ def add_to_roster(update: Update, _: CallbackContext):
 
 def create_user(user, whitelist=True):
     """Create user with upsert."""
+    logger.info(f"Create user {user.id}")
+
     user_dict = get_user_dict_from_user(user)
     user_dict['createdAt'] = datetime.datetime.now()
     user_dict['isWhitelisted'] = whitelist
@@ -1122,11 +1137,6 @@ def get_chat_id():
         return None
     
     return chat_id
-
-def cancel(update: Update, _: CallbackContext) -> int:
-    user = update.message.from_user
-    logger.info("User %s cancelled the conversation.", user.first_name)
-    return ConversationHandler.END
 
 def send_beta_v2(update: Update, _: CallbackContext):
     add_to_waitlist(update)

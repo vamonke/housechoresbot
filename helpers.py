@@ -41,6 +41,9 @@ chat_properties = [
 
 VAMONKE_ID = 265435469
 
+week_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+week_days_short = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
 TELEGRAM_TOKEN = '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
 # TELEGRAM_TOKEN = '1798724954:AAEadvyQikDry8r1Qy0CyPDL__iRLRi0at8'
 TEST_TELEGRAM_TOKEN = '1798724954:AAEadvyQikDry8r1Qy0CyPDL__iRLRi0at8'

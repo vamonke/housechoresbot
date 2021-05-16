@@ -47,12 +47,11 @@ from commands_v2 import (
     # next_duty,
     mark_as_done,
     # remind,
-    get_chat_id,
+    # get_chat_id,
     # reschedule,
-    add_to_waitlist,
+    # add_to_waitlist,
     create_roster,
     receive_roster_name,
-    cancel,
     join_roster_select,
     join_roster,
     add_to_new_roster,
@@ -68,6 +67,14 @@ from commands_v2 import (
     delete_roster_select,
     delete_roster,
     # GET_ROSTER_NAME,
+)
+
+from commands_v3 import (
+    add_command,
+    new_chore_callback,
+    cancel_callback,
+    new_chore_day_callback,
+    new_chore_single,
 )
 
 from helpers import (
@@ -171,6 +178,13 @@ def add_handlers(dispatcher):
     dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern=r'^rosterdone\.'))
     dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern=r'^leave\.'))
     dispatcher.add_handler(CallbackQueryHandler(delete_roster, pattern=r'^deleteroster\.'))
+
+    # v3
+    dispatcher.add_handler(CommandHandler("add", check_whitelist(add_command)))
+    dispatcher.add_handler(CallbackQueryHandler(new_chore_callback, pattern=r'^newchore$'))
+    dispatcher.add_handler(CallbackQueryHandler(new_chore_day_callback, pattern=r'^newchoreday\.'))
+    dispatcher.add_handler(CallbackQueryHandler(cancel_callback, pattern=r'^cancel$'))
+    dispatcher.add_handler(CallbackQueryHandler(new_chore_single, pattern=r'^newchoresingle'))
 
     # Beta message
     dispatcher.add_handler(CommandHandler("welcome", whitelist_user))
