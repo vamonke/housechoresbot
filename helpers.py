@@ -45,8 +45,8 @@ TELEGRAM_TOKEN = '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
 # TELEGRAM_TOKEN = '1798724954:AAEadvyQikDry8r1Qy0CyPDL__iRLRi0at8'
 TEST_TELEGRAM_TOKEN = '1798724954:AAEadvyQikDry8r1Qy0CyPDL__iRLRi0at8'
 
-ENVIRONMENT = os.environ.get('ENVIRONMENT')
-IS_DEV = ENVIRONMENT is not 'prod'
+# ENVIRONMENT = os.environ.get('ENVIRONMENT')
+# IS_DEV = ENVIRONMENT is not 'prod'
 
 def get_name_from_user_id(user_id):
     user_dict = Users.find_one({ 'id': user_id })
@@ -91,13 +91,13 @@ def configure_telegram():
     Configures the bot with a Telegram Token.
     Returns a bot instance.
     """
-    TOKEN = TELEGRAM_TOKEN
-    if not TOKEN:
+    TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
+    if not TELEGRAM_TOKEN:
         logger.error('The TELEGRAM_TOKEN must be set')
         raise NotImplementedError
 
-    # print(TOKEN)
-    return Bot(TOKEN)
+    # print(TELEGRAM_TOKEN)
+    return Bot(TELEGRAM_TOKEN)
 
 def alert_creator(message):
     bot = configure_telegram()

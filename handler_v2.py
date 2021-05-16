@@ -1,12 +1,22 @@
 # import random
 # import pymongo
-import logging
 # import requests
 import os
+import sys
 import json
 # import datetime
 # import pprint
 # from urllib.parse import urlencode
+
+if "TELEGRAM_TOKEN" not in os.environ:
+    arg_token = sys.argv[1]
+    os.environ["TELEGRAM_TOKEN"] = arg_token # TELEGRAM_TOKEN
+    print("TELEGRAM_TOKEN: " + os.environ["TELEGRAM_TOKEN"])
+
+if "MONGODB_URI" not in os.environ:
+    arg_uri = sys.argv[2]
+    os.environ["MONGODB_URI"] = arg_uri # MONGODB_URI
+    print('MONGODB_URI: ' + os.environ["MONGODB_URI"])
 
 from telegram import (
     Update,
@@ -57,21 +67,16 @@ from commands_v2 import (
     save_chat_group,
     delete_roster_select,
     delete_roster,
-    GET_ROSTER_NAME,
+    # GET_ROSTER_NAME,
 )
 
 from helpers import (
     configure_telegram,
-    get_whitelisted_chats,
-    get_whitelisted_users
+    # get_whitelisted_chats,
+    # get_whitelisted_users
 )
 
-# Logging is cool!
-logger = logging.getLogger()
-if logger.handlers:
-    for handler in logger.handlers:
-        logger.removeHandler(handler)
-logging.basicConfig(level=logging.INFO)
+from logger import logger
 
 OK_RESPONSE = {
     'statusCode': 200,
@@ -82,14 +87,6 @@ ERROR_RESPONSE = {
     'statusCode': 400,
     'body': json.dumps('Oops, something went wrong!')
 }
-
-logger = logging.getLogger(__name__)
-
-TELEGRAM_TOKEN = '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
-TEST_TELEGRAM_TOKEN = '1798724954:AAEadvyQikDry8r1Qy0CyPDL__iRLRi0at8'
-
-ENVIRONMENT = os.environ.get('ENVIRONMENT')
-IS_DEV = ENVIRONMENT is not 'prod'
 
 user_properties = [
     'id',
@@ -180,17 +177,10 @@ def add_handlers(dispatcher):
     # dispatcher.add_handler(MessageHandler(blacklisted_filter, send_beta_v2))
     dispatcher.add_handler(ChatMemberHandler(save_chat_group))
 
-def main_prod():
-    logger.info('Running HouseChoresBot')
-    updater = Updater(TELEGRAM_TOKEN)
-    dispatcher = updater.dispatcher
-    add_handlers(dispatcher)
-    updater.start_polling()
-    updater.idle()
+def main():
+    TOKEN = os.environ["TELEGRAM_TOKEN"]
 
-def main_dev():
-    logger.info('Running DutyRosterBot')
-    updater = Updater(TEST_TELEGRAM_TOKEN)
+    updater = Updater(TOKEN)
     dispatcher = updater.dispatcher
     add_handlers(dispatcher)
     updater.start_polling()
@@ -207,8 +197,7 @@ def dev():
     update = Update.de_json(body, bot)
     dispatcher.process_update(update)
 
-# if __name__ == '__main__':
-#     main_prod()
-    # main_dev()
+if __name__ == '__main__':
+    main()
     # dev()
     # routine(None, None)

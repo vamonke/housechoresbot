@@ -1,12 +1,11 @@
 import pymongo
-# import os
+import os
 
-import logger
+from logger import logger
 
-MONGODB_URI = 'mongodb+srv://vamonke:bDlccB4w6Ads4jmk@housechores.cerl9.mongodb.net/housechores?retryWrites=true&w=majority'
-# MONGODB_URI = 'mongodb://localhost:27017/'
-# MONGODB_URI = os.environ.get('MONGODB_URI')
+# MONGODB_URI = 'mongodb+srv://vamonke:bDlccB4w6Ads4jmk@housechores.cerl9.mongodb.net/housechores?retryWrites=true&w=majority'
 # TEST_MONGODB_URI = 'mongodb://localhost:27017/'
+# MONGODB_URI = 'mongodb://localhost:27017/'
 # ENVIRONMENT = os.environ.get('ENVIRONMENT')
 
 # MONGODB_URI = os.environ.get('MONGODB_URI') if ENVIRONMENT is 'prod' else TEST_MONGODB_URI
@@ -16,7 +15,7 @@ def setup_mongodb():
     Setup mongodb client with mongodb uri.
     Returns a mongodb database instance.
     """
-
+    MONGODB_URI = os.environ.get('MONGODB_URI')
     if not MONGODB_URI:
         logger.error('The MONGODB_URI must be set')
         raise NotImplementedError

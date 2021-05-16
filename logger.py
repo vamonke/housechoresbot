@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 if logger.handlers:
     for handler in logger.handlers:
         logger.removeHandler(handler)

@@ -37,7 +37,7 @@ from mongo import (
     Rosters,
     Duties,
     Users,
-    Waitlist,
+    # Waitlist,
 )
 
 from helpers import (

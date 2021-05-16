@@ -115,8 +115,7 @@ def configure_telegram():
     Configures the bot with a Telegram Token.
     Returns a bot instance.
     """
-
-    TELEGRAM_TOKEN = TEST_TELEGRAM_TOKEN if IS_DEV else TELEGRAM_TOKEN
+    TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
     if not TELEGRAM_TOKEN:
         logger.error('The TELEGRAM_TOKEN must be set')
         raise NotImplementedError
