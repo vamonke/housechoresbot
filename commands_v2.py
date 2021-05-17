@@ -330,10 +330,9 @@ def receive_roster_name(update: Update, _: CallbackContext):
         return_document=pymongo.ReturnDocument.AFTER,
     )
 
-
     user_text = user.mention_markdown_v2()
 
-    message = fr'Add chore: *{name}*' + '\n'
+    message = fr'New chore: *{name}*' + '\n'
     message += fr'{user_text} Choose a day to perform this chore'
 
     roster_id = result['_id']
@@ -1100,7 +1099,7 @@ def user_next_duty(user_dict: dict, roster: dict, update: Update):
     roster_name = roster['name']
 
     if duty_date == today:
-        message = fr'📅 {user_text} you have a duty today: *{roster_name}*\. Send \/done once you\'ve completed your chore 👍'
+        message = fr'📅 {user_text} you have a task today: *{roster_name}*\. Send \/done once you\'ve completed your chore 👍'
         logger.info('Callback query message:\n' + message)
         update.callback_query.message.reply_markdown_v2(message, quote=False)
     # elif duty_date == today + datetime.timedelta(days=1):

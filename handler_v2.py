@@ -75,6 +75,7 @@ from commands_v3 import (
     cancel_callback,
     new_chore_day_callback,
     new_chore_single,
+    add_existing_chore_callback,
 )
 
 from helpers import (
@@ -182,6 +183,7 @@ def add_handlers(dispatcher):
     # v3
     dispatcher.add_handler(CommandHandler("add", check_whitelist(add_command)))
     dispatcher.add_handler(CallbackQueryHandler(new_chore_callback, pattern=r'^newchore$'))
+    dispatcher.add_handler(CallbackQueryHandler(add_existing_chore_callback, pattern=r'^addexistingchore\.'))
     dispatcher.add_handler(CallbackQueryHandler(new_chore_day_callback, pattern=r'^newchoreday\.'))
     dispatcher.add_handler(CallbackQueryHandler(cancel_callback, pattern=r'^cancel$'))
     dispatcher.add_handler(CallbackQueryHandler(new_chore_single, pattern=r'^newchoresingle'))

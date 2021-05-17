@@ -84,7 +84,7 @@ def add_command(update: Update, _: CallbackContext):
     user_text = user.mention_markdown_v2()
     message = fr'{user_text} what\'s the name of the chore\?'
 
-    keyboard = [roster_to_button(r, 'join') for r in rosters]
+    keyboard = [roster_to_button(r, 'addexistingchore') for r in rosters]
     keyboard.append(
         [InlineKeyboardButton('✏️ New chore', callback_data='newchore')]
     )
@@ -124,7 +124,7 @@ def new_chore_day_callback(update: Update, _: CallbackContext):
     user_text = user.mention_markdown_v2()
 
     data = update.callback_query.data
-    print(data)
+    # print(data)
     _, roster_id, duty_day = data.split(".")
     duty_day = int(duty_day)
     
@@ -212,7 +212,7 @@ def new_chore_single(update: Update, _: CallbackContext):
     )
 
     roster_name = roster['name']
-    duty_day_str = duty_date.strftime("%A %d/%m")
+    duty_day_str = duty_date.strftime("%A %d %b")
 
     message = fr"New chore *{roster_name}* added for {user_text} on *{duty_day_str}*\." + '\n'
     message += "\(I\'ll send a reminder in the morning 😉\)"
@@ -220,5 +220,57 @@ def new_chore_single(update: Update, _: CallbackContext):
     logger.info('Edit message:\n' + message)
     query.edit_message_text(
         text=message,
+        parse_mode=constants.PARSEMODE_MARKDOWN_V2,
+    )
+
+def add_existing_chore_callback(update: Update, _: CallbackContext):
+    """ Ask which day for exising chore """
+    query = update.callback_query
+    query.answer()
+
+    user = update.effective_user
+    user_text = user.mention_markdown_v2()
+
+    data = update.callback_query.data
+    _, roster_id = data.split(".")
+    
+    roster_id = ObjectId(roster_id)
+    roster = Rosters.find_one(roster_id)
+
+    if roster is None:
+        message = 'Oops! Something went wrong. Please try again in a few mins.'
+        logger.info('Edit message:\n' + message)
+        query.edit_message_text(text=message)
+        return
+
+    user_text = user.mention_markdown_v2()
+
+    roster_name = roster['name']
+    message = fr'Add chore: *{roster_name}*' + '\n'
+    message += fr'{user_text} Choose a day to perform this chore'
+
+    keyboard = [
+        [
+            InlineKeyboardButton("Mon", callback_data=fr'newchoreday.{roster_id}.0'),
+            InlineKeyboardButton("Tue", callback_data=fr'newchoreday.{roster_id}.1'),
+            InlineKeyboardButton("Wed", callback_data=fr'newchoreday.{roster_id}.2'),
+            InlineKeyboardButton("Thu", callback_data=fr'newchoreday.{roster_id}.3'),
+            InlineKeyboardButton("Fri", callback_data=fr'newchoreday.{roster_id}.4'),
+        ],
+        [
+            InlineKeyboardButton("Sat", callback_data=fr'newchoreday.{roster_id}.5'),
+            InlineKeyboardButton("Sun", callback_data=fr'newchoreday.{roster_id}.6'),
+        ],
+        [
+            InlineKeyboardButton("Cancel", callback_data=fr'cancel'),
+        ],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    logger.info('Reply message:\n' + message)
+
+    query.edit_message_text(
+        text=message,
+        reply_markup=reply_markup,
         parse_mode=constants.PARSEMODE_MARKDOWN_V2,
     )
