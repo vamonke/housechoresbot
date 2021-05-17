@@ -1,7 +1,7 @@
 # import random
 # import requests
 import os
-# import json
+import pymongo
 # import datetime
 # from bson.objectid import ObjectId
 # from urllib.parse import urlencode
@@ -16,7 +16,7 @@ from telegram import (
 from mongo import (
     Chats,
     # Schedules,
-    # Rosters,
+    Rosters,
     # Duties,
     Users
 )
@@ -108,4 +108,13 @@ def alert_creator(message):
         chat_id=VAMONKE_ID,
         text=message,
         parse_mode=constants.PARSEMODE_MARKDOWN_V2,
+    )
+
+def add_user_to_roster(user_dict, roster_id):
+    return Rosters.find_one_and_update(
+        { '_id': roster_id },
+        { '$addToSet':
+            { "schedule": user_dict },
+        },
+        return_document=pymongo.ReturnDocument.AFTER,
     )

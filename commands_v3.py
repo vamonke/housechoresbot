@@ -41,6 +41,7 @@ from commands_v2 import (
     create_user,
     create_roster,
     roster_to_button,
+    create_user_duties,
 )
 
 from helpers import (
@@ -50,6 +51,7 @@ from helpers import (
     get_is_whitelisted,
     alert_creator,
     configure_telegram,
+    add_user_to_roster,
     week_days,
     week_days_short,
 )
@@ -143,8 +145,8 @@ def new_chore_day_callback(update: Update, _: CallbackContext):
     message = fr'New chore: *{roster_name}* on *{duty_day_str}*' + '\n'
     message += fr"{user_text} Does this chore repeat every {duty_day_str}\?"
 
-    callback_data_one = f'newchoresingle.{roster_id}.{duty_day}'
-    callback_data_repeat = f'newchoredayrepeat.{roster_id}.{duty_day}'
+    callback_data_one = f'addchoresingle.{roster_id}.{duty_day}'
+    callback_data_repeat = f'addchoreweekly.{roster_id}.{duty_day}'
 
     keyboard = [
         [
@@ -166,7 +168,7 @@ def cancel_callback(update: Update, _: CallbackContext):
     query.answer()
     query.message.delete()
 
-def new_chore_single(update: Update, _: CallbackContext):
+def add_chore_single(update: Update, _: CallbackContext):
     query = update.callback_query
     query.answer()
 
@@ -215,7 +217,52 @@ def new_chore_single(update: Update, _: CallbackContext):
     duty_day_str = duty_date.strftime("%A %d %b")
 
     message = fr"New chore *{roster_name}* added for {user_text} on *{duty_day_str}*\." + '\n'
-    message += "\(I\'ll send a reminder in the morning 😉\)"
+    message += "I\'ll send a reminder in the morning 😉"
+    
+    logger.info('Edit message:\n' + message)
+    query.edit_message_text(
+        text=message,
+        parse_mode=constants.PARSEMODE_MARKDOWN_V2,
+    )
+
+def add_chore_weekly(update: Update, _: CallbackContext):
+    query = update.callback_query
+    query.answer()
+
+    data = update.callback_query.data
+    # print(data)
+    _, roster_id, duty_day = data.split(".")
+    duty_day = int(duty_day)
+
+    # chat_id = update.effective_chat.id
+    roster_id = ObjectId(roster_id)
+    roster = Rosters.find_one(roster_id)
+
+    if roster is None:
+        message = 'Oops! Something went wrong. Please try again in a few mins.'
+        logger.info('Edit message:\n' + message)
+        query.edit_message_text(text=message)
+        return
+    
+    # Add user to roster schedule
+    user = update.effective_user
+    user_text = user.mention_markdown_v2()
+    user_dict = get_user_dict_from_user(user)
+    user_dict['dutyDay'] = duty_day
+    add_user_to_roster(user_dict, roster_id)
+
+    # Create user duties
+    create_user_duties(
+        user_dict=user_dict,
+        roster=roster,
+        update=update
+    )
+
+    roster_name = roster['name']
+    duty_day_str = week_days[duty_day]
+
+    message = fr"New chore *{roster_name}* added for {user_text} every *{duty_day_str}*\." + '\n'
+    message += "I\'ll send a reminder in the morning 😉"
     
     logger.info('Edit message:\n' + message)
     query.edit_message_text(
