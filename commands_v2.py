@@ -340,15 +340,15 @@ def receive_roster_name(update: Update, _: CallbackContext):
 
     keyboard = [
         [
-            InlineKeyboardButton("Mon", callback_data=fr'newchoreday.{roster_id}.0'),
-            InlineKeyboardButton("Tue", callback_data=fr'newchoreday.{roster_id}.1'),
-            InlineKeyboardButton("Wed", callback_data=fr'newchoreday.{roster_id}.2'),
-            InlineKeyboardButton("Thu", callback_data=fr'newchoreday.{roster_id}.3'),
-            InlineKeyboardButton("Fri", callback_data=fr'newchoreday.{roster_id}.4'),
+            InlineKeyboardButton("Mon", callback_data=fr'addchoreday.{roster_id}.0'),
+            InlineKeyboardButton("Tue", callback_data=fr'addchoreday.{roster_id}.1'),
+            InlineKeyboardButton("Wed", callback_data=fr'addchoreday.{roster_id}.2'),
+            InlineKeyboardButton("Thu", callback_data=fr'addchoreday.{roster_id}.3'),
+            InlineKeyboardButton("Fri", callback_data=fr'addchoreday.{roster_id}.4'),
         ],
         [
-            InlineKeyboardButton("Sat", callback_data=fr'newchoreday.{roster_id}.5'),
-            InlineKeyboardButton("Sun", callback_data=fr'newchoreday.{roster_id}.6'),
+            InlineKeyboardButton("Sat", callback_data=fr'addchoreday.{roster_id}.5'),
+            InlineKeyboardButton("Sun", callback_data=fr'addchoreday.{roster_id}.6'),
         ],
         [
             InlineKeyboardButton("Cancel", callback_data=fr'cancel'),
@@ -1243,3 +1243,8 @@ def delete_roster_select(update: Update, _: CallbackContext):
         reply_markup=reply_markup,
         quote=False,
     )
+
+def cancel_callback(update: Update, _: CallbackContext):
+    query = update.callback_query
+    query.answer()
+    query.message.delete()

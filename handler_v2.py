@@ -66,18 +66,20 @@ from commands_v2 import (
     save_chat_group,
     delete_roster_select,
     delete_roster,
-    # GET_ROSTER_NAME,
+    cancel_callback,
 )
 
-from commands_v3 import (
+from add_chore import (
     add_command,
-    new_chore_callback,
-    cancel_callback,
-    new_chore_day_callback,
+    add_new_chore_callback,
+    add_chore_day_callback,
     add_chore_single,
     add_chore_weekly,
     add_existing_chore_callback,
-    mark_as_done,
+)
+
+from done_chore import (
+    done_command,
     mark_duty_as_done_callback,
 )
 
@@ -165,7 +167,7 @@ def add_handlers(dispatcher):
     dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
     dispatcher.add_handler(CommandHandler("addchore", check_whitelist(create_roster)))
     dispatcher.add_handler(MessageHandler(Filters.reply & ~Filters.command, check_whitelist(receive_roster_name)))
-    dispatcher.add_handler(CommandHandler("done", check_whitelist(mark_as_done)))
+    # dispatcher.add_handler(CommandHandler("done", check_whitelist(mark_as_done)))
     dispatcher.add_handler(CommandHandler("chores", check_whitelist(show_duties)))
     dispatcher.add_handler(CommandHandler("join", check_whitelist(join_roster_select)))
     dispatcher.add_handler(CommandHandler("dutyroster", check_whitelist(show_rosters)))
@@ -183,14 +185,17 @@ def add_handlers(dispatcher):
     dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern=r'^leave\.'))
     dispatcher.add_handler(CallbackQueryHandler(delete_roster, pattern=r'^deleteroster\.'))
 
-    # v3
+    # v3 add chore
     dispatcher.add_handler(CommandHandler("add", check_whitelist(add_command)))
-    dispatcher.add_handler(CallbackQueryHandler(new_chore_callback, pattern=r'^newchore$'))
+    dispatcher.add_handler(CallbackQueryHandler(add_new_chore_callback, pattern=r'^addnewchore$'))
     dispatcher.add_handler(CallbackQueryHandler(add_existing_chore_callback, pattern=r'^addexistingchore\.'))
-    dispatcher.add_handler(CallbackQueryHandler(new_chore_day_callback, pattern=r'^newchoreday\.'))
+    dispatcher.add_handler(CallbackQueryHandler(add_chore_day_callback, pattern=r'^addchoreday\.'))
     dispatcher.add_handler(CallbackQueryHandler(cancel_callback, pattern=r'^cancel$'))
     dispatcher.add_handler(CallbackQueryHandler(add_chore_single, pattern=r'^addchoresingle'))
     dispatcher.add_handler(CallbackQueryHandler(add_chore_weekly, pattern=r'^addchoreweekly'))
+
+    # v3 add chore
+    dispatcher.add_handler(CommandHandler("done", check_whitelist(done_command)))
     dispatcher.add_handler(CallbackQueryHandler(mark_duty_as_done_callback, pattern=r'^dutydone'))
 
     # Beta message
