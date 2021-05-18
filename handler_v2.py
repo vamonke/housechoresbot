@@ -83,6 +83,13 @@ from done_chore import (
     mark_duty_as_done_callback,
 )
 
+from delete_chore import (
+    delete_command,
+    delete_duty_callback,
+    delete_duty_single_callback,
+    delete_duty_weekly_callback,
+)
+
 from helpers import (
     configure_telegram,
     # get_whitelisted_chats,
@@ -197,6 +204,12 @@ def add_handlers(dispatcher):
     # v3 add chore
     dispatcher.add_handler(CommandHandler("done", check_whitelist(done_command)))
     dispatcher.add_handler(CallbackQueryHandler(mark_duty_as_done_callback, pattern=r'^dutydone'))
+
+    # v3 delete chore
+    dispatcher.add_handler(CommandHandler("delete", check_whitelist(delete_command)))
+    dispatcher.add_handler(CallbackQueryHandler(delete_duty_callback, pattern=r'^deleteduty\.'))
+    dispatcher.add_handler(CallbackQueryHandler(delete_duty_single_callback, pattern=r'^deletedutysingle\.'))
+    dispatcher.add_handler(CallbackQueryHandler(delete_duty_weekly_callback, pattern=r'^deletedutyweekly\.'))
 
     # Beta message
     dispatcher.add_handler(CommandHandler("welcome", whitelist_user))

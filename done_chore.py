@@ -44,7 +44,7 @@ def done_command(update: Update, _: CallbackContext):
     user = update.effective_user
     user_id = user.id
 
-    # Get date window for duty
+    # Get date window
     now = datetime.datetime.now()
     today = datetime.datetime(now.year, now.month, now.day)
     # window_start = today - datetime.timedelta(days=2)

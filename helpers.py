@@ -2,7 +2,7 @@ import random
 import requests
 import os
 import pymongo
-# import datetime
+import datetime
 # from bson.objectid import ObjectId
 from urllib.parse import urlencode
 
@@ -19,7 +19,7 @@ from mongo import (
     Chats,
     # Schedules,
     Rosters,
-    # Duties,
+    Duties,
     Users
 )
 
@@ -144,3 +144,28 @@ def duty_to_button(duty, callback_text):
     callback_data = fr'{callback_text}.{roster_id}'
     print(button_text + ' ' + callback_data)
     return [InlineKeyboardButton(button_text, callback_data=callback_data)]
+
+def find_incomplete_duties(chat_id: int, user_id: int, from_date, to_date):
+    # TODO: Aggregate and use $lookup to populate roster names
+
+    # Get duties in date window
+    logger.info(f'Fetching incomplete duties with chat_id {chat_id} user_id {user_id} between {from_date} and {to_date}')
+    incomplete_duties = Duties.find({
+        'chat_id': chat_id,
+        'user': user_id,
+        'isCompleted': False,
+        'date': { '$gte': from_date, '$lte': to_date }
+    }, sort=[('date', 1)])
+
+    incomplete_duties = list(incomplete_duties)
+    logger.info(fr'Found incomplete duties {incomplete_duties}')
+    
+    return incomplete_duties
+
+def send_chore_missing_message(update):
+    query = update.callback_query
+    message = 'Oops! This chore has been removed.'
+    logger.info('Edit message:\n' + message)
+    query.edit_message_text(text=message)
+
+cancel_button = [InlineKeyboardButton("Cancel", callback_data=fr'cancel')]
