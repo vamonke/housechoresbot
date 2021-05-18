@@ -1,18 +1,15 @@
-import random
-import requests
 import pymongo
 import time
 # import os
 # import json
 import datetime
 from bson.objectid import ObjectId
-from urllib.parse import urlencode
 
 from telegram import (
     Update,
     # Bot,
     User,
-    Message,
+    # Message,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
     # KeyboardButton,
@@ -47,13 +44,12 @@ from helpers import (
     get_is_whitelisted,
     alert_creator,
     configure_telegram,
+    send_gif,
     week_days,
     week_days_short,
 )
 
 from logger import logger
-
-GIPHY_API_KEY = '1iI19SCF571Lt9CV2uNsXv3t1CzIRznM'
 
 HOUSE_CHORES_BOT_ID = 1783406286
 DUTY_ROSTER_BOT_ID = 1798724954
@@ -200,7 +196,7 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
         request = pymongo.UpdateOne(
             {
                 'user': user_id,
-                'date': date,
+                'scheduledAt': date,
                 'roster_id': roster_id,
                 'isCompleted': False,
             },
@@ -212,6 +208,7 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
                     'chat_id': chat_id,
                     'isCompleted': False,
                     'createdAt': now,
+                    'scheduledAt': date,
                 }
             },
             upsert=True
@@ -841,7 +838,11 @@ def mark_as_done(update: Update, _: CallbackContext):
     duty_id = duty['_id']
     Duties.update_one(
         { '_id': duty_id },
-        { '$set': { 'isCompleted': True, 'isMissed': False } }
+        { '$set': {
+            'isCompleted': True,
+            'isMissed': False,
+            'completedAt': now,
+        } }
     )
 
     message = fr'✅ {user_text} just completed a chore\! 👏 👏 👏'
@@ -944,6 +945,7 @@ def mark_roster_as_done(update: Update, _: CallbackContext):
                     'date': today,
                     'isAdhoc': True,
                     'createdAt': now,
+                    'completedAt': now,
                 }
             },
             upsert=True,
@@ -955,10 +957,6 @@ def mark_roster_as_done(update: Update, _: CallbackContext):
     query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
     
     send_gif(query.message)
-
-def send_gif(message: Message):
-    url = get_gif()
-    message.reply_animation(animation=url, quote=False)
 
 def leave_roster(update: Update, _: CallbackContext):
     """Remove user from roster and remove duties"""
@@ -1109,20 +1107,6 @@ def user_next_duty(user_dict: dict, roster: dict, update: Update):
     #     message = fr'📅 {user_text}: Your next laundry duty is on {date}'
 
     # update.callback_query.message.reply_markdown_v2(message, quote=False)
-
-def get_gif():
-    random.seed()
-    offset = random.randint(0, 100)
-    search_url = 'https://api.giphy.com/v1/gifs/search'
-    params = urlencode({
-        'api_key': GIPHY_API_KEY,
-        'q': 'well done',
-        'limit': 1,
-        'offset': offset,
-    })
-    contents = requests.get(search_url + '?' + params).json()
-    url = contents['data'][0]['images']['fixed_height']['url']
-    return url
 
 def get_chat_id():
     schedule = Schedules.find_one()

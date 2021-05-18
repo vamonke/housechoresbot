@@ -45,7 +45,7 @@ from commands_v2 import (
     # create_duties,
     show_rosters,
     # next_duty,
-    mark_as_done,
+    # mark_as_done,
     # remind,
     # get_chat_id,
     # reschedule,
@@ -77,6 +77,8 @@ from commands_v3 import (
     add_chore_single,
     add_chore_weekly,
     add_existing_chore_callback,
+    mark_as_done,
+    mark_duty_as_done_callback,
 )
 
 from helpers import (
@@ -189,6 +191,7 @@ def add_handlers(dispatcher):
     dispatcher.add_handler(CallbackQueryHandler(cancel_callback, pattern=r'^cancel$'))
     dispatcher.add_handler(CallbackQueryHandler(add_chore_single, pattern=r'^addchoresingle'))
     dispatcher.add_handler(CallbackQueryHandler(add_chore_weekly, pattern=r'^addchoreweekly'))
+    dispatcher.add_handler(CallbackQueryHandler(mark_duty_as_done_callback, pattern=r'^dutydone'))
 
     # Beta message
     dispatcher.add_handler(CommandHandler("welcome", whitelist_user))

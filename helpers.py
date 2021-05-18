@@ -1,15 +1,17 @@
-# import random
-# import requests
+import random
+import requests
 import os
 import pymongo
 # import datetime
 # from bson.objectid import ObjectId
-# from urllib.parse import urlencode
+from urllib.parse import urlencode
 
 from telegram import (
     # Update,
     Bot,
     User,
+    Message,
+    InlineKeyboardButton,
     constants
 )
 
@@ -44,12 +46,11 @@ VAMONKE_ID = 265435469
 week_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 week_days_short = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-TELEGRAM_TOKEN = '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
+# TELEGRAM_TOKEN = '1783406286:AAElzXepih8u3OwKtvlvLYy3GC2eL8r1Ejk'
 # TELEGRAM_TOKEN = '1798724954:AAEadvyQikDry8r1Qy0CyPDL__iRLRi0at8'
-TEST_TELEGRAM_TOKEN = '1798724954:AAEadvyQikDry8r1Qy0CyPDL__iRLRi0at8'
+# TEST_TELEGRAM_TOKEN = '1798724954:AAEadvyQikDry8r1Qy0CyPDL__iRLRi0at8'
 
-# ENVIRONMENT = os.environ.get('ENVIRONMENT')
-# IS_DEV = ENVIRONMENT is not 'prod'
+GIPHY_API_KEY = '1iI19SCF571Lt9CV2uNsXv3t1CzIRznM'
 
 def get_name_from_user_id(user_id):
     user_dict = Users.find_one({ 'id': user_id })
@@ -118,3 +119,28 @@ def add_user_to_roster(user_dict, roster_id):
         },
         return_document=pymongo.ReturnDocument.AFTER,
     )
+
+def send_gif(message: Message):
+    url = get_gif()
+    message.reply_animation(animation=url, quote=False)
+
+def get_gif():
+    random.seed()
+    offset = random.randint(0, 100)
+    search_url = 'https://api.giphy.com/v1/gifs/search'
+    params = urlencode({
+        'api_key': GIPHY_API_KEY,
+        'q': 'well done',
+        'limit': 1,
+        'offset': offset,
+    })
+    contents = requests.get(search_url + '?' + params).json()
+    url = contents['data'][0]['images']['fixed_height']['url']
+    return url
+
+def duty_to_button(duty, callback_text):
+    button_text = duty['name'] + duty['date'].strftime(" %a %d %b")
+    roster_id = duty['_id']
+    callback_data = fr'{callback_text}.{roster_id}'
+    print(button_text + ' ' + callback_data)
+    return [InlineKeyboardButton(button_text, callback_data=callback_data)]
