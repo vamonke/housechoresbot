@@ -753,8 +753,8 @@ def show_duties(update: Update, _: CallbackContext):
     now = datetime.datetime.now()
     today = datetime.datetime(now.year, now.month, now.day)
     start_of_week = today - datetime.timedelta(days=today.weekday())
-    end_of_week = start_of_week + datetime.timedelta(weeks=2) # TODO
-    # end_of_week = today + datetime.timedelta(days=6)
+    # end_of_week = start_of_week + datetime.timedelta(weeks=2) # TODO
+    end_of_week = today + datetime.timedelta(days=6)
 
     logger.info(f'Fetching duties between {start_of_week} and {end_of_week}')
     cursor = Duties.find({
@@ -795,7 +795,8 @@ def show_duties(update: Update, _: CallbackContext):
         message += "\n\n"
 
     if message:
-        message = "This week\'s chores\n\n" + message
+        message = message
+        # message = "This week\'s chores\n\n" + message
     else:
         message = "🤷 No chores this week"
 

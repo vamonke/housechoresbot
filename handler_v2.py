@@ -180,26 +180,26 @@ def set_webhook(event, context):
 
 def add_handlers(dispatcher):
     # Commands
-    dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
-    dispatcher.add_handler(CommandHandler("addchore", check_whitelist(create_roster)))
+    # dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
+    # dispatcher.add_handler(CommandHandler("addchore", check_whitelist(create_roster)))
     dispatcher.add_handler(MessageHandler(Filters.reply & ~Filters.command, check_whitelist(receive_roster_name)))
     # dispatcher.add_handler(CommandHandler("done", check_whitelist(mark_as_done)))
     dispatcher.add_handler(CommandHandler("chores", check_whitelist(show_duties)))
-    dispatcher.add_handler(CommandHandler("join", check_whitelist(join_roster_select)))
+    # dispatcher.add_handler(CommandHandler("join", check_whitelist(join_roster_select)))
     dispatcher.add_handler(CommandHandler("dutyroster", check_whitelist(show_rosters)))
-    dispatcher.add_handler(CommandHandler("leave", check_whitelist(leave_roster_select)))
-    dispatcher.add_handler(CommandHandler("deleteroster", check_whitelist(delete_roster_select)))
+    # dispatcher.add_handler(CommandHandler("leave", check_whitelist(leave_roster_select)))
+    # dispatcher.add_handler(CommandHandler("deleteroster", check_whitelist(delete_roster_select)))
     # dispatcher.add_handler(CommandHandler("reschedule", check_whitelist(reschedule)))
     # dispatcher.add_handler(CommandHandler("editduty", check_whitelist(editduty)))
     # dispatcher.add_handler(CommandHandler("nextduty", check_whitelist(next_duty)))
 
     # Callback handlers
-    dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern=r'^(joinnewroster|join)\.'))
-    dispatcher.add_handler(CallbackQueryHandler(add_to_new_roster, pattern=r'^addtonewroster\.'))
-    dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern=r'^addtoroster\.'))
-    dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern=r'^rosterdone\.'))
-    dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern=r'^leave\.'))
-    dispatcher.add_handler(CallbackQueryHandler(delete_roster, pattern=r'^deleteroster\.'))
+    # dispatcher.add_handler(CallbackQueryHandler(join_roster, pattern=r'^(joinnewroster|join)\.'))
+    # dispatcher.add_handler(CallbackQueryHandler(add_to_new_roster, pattern=r'^addtonewroster\.'))
+    # dispatcher.add_handler(CallbackQueryHandler(add_to_roster, pattern=r'^addtoroster\.'))
+    # dispatcher.add_handler(CallbackQueryHandler(mark_roster_as_done, pattern=r'^rosterdone\.'))
+    # dispatcher.add_handler(CallbackQueryHandler(leave_roster, pattern=r'^leave\.'))
+    # dispatcher.add_handler(CallbackQueryHandler(delete_roster, pattern=r'^deleteroster\.'))
 
     # v3 add chore
     dispatcher.add_handler(CommandHandler("add", check_whitelist(add_command)))
@@ -210,7 +210,7 @@ def add_handlers(dispatcher):
     dispatcher.add_handler(CallbackQueryHandler(add_chore_single, pattern=r'^addchoresingle'))
     dispatcher.add_handler(CallbackQueryHandler(add_chore_weekly, pattern=r'^addchoreweekly'))
 
-    # v3 add chore
+    # v3 done chore
     dispatcher.add_handler(CommandHandler("done", check_whitelist(done_command)))
     dispatcher.add_handler(CallbackQueryHandler(mark_duty_as_done_callback, pattern=r'^dutydone'))
 
