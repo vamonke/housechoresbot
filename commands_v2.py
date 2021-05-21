@@ -190,9 +190,9 @@ def create_user_duties(user_dict: dict, roster: dict, update: Update):
     day = user_dict['dutyDay']
     date = start_of_cycle + datetime.timedelta(days=day)
     while (date < end_of_cycle):
-        # if (date < today):
-        #     date += datetime.timedelta(weeks=1)
-        #     continue
+        if (date < today):
+            date += datetime.timedelta(weeks=1)
+            continue
         request = pymongo.UpdateOne(
             {
                 'user': user_id,
@@ -753,7 +753,7 @@ def show_duties(update: Update, _: CallbackContext):
     now = datetime.datetime.now()
     today = datetime.datetime(now.year, now.month, now.day)
     start_of_week = today - datetime.timedelta(days=today.weekday())
-    end_of_week = start_of_week + datetime.timedelta(weeks=1)
+    end_of_week = start_of_week + datetime.timedelta(weeks=2) # TODO
     # end_of_week = today + datetime.timedelta(days=6)
 
     logger.info(f'Fetching duties between {start_of_week} and {end_of_week}')

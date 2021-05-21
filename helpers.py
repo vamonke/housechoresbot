@@ -7,7 +7,7 @@ import datetime
 from urllib.parse import urlencode
 
 from telegram import (
-    # Update,
+    Update,
     Bot,
     User,
     Message,
@@ -142,7 +142,7 @@ def duty_to_button(duty, callback_text):
     button_text = duty['name'] + duty['date'].strftime(" %a %d %b")
     roster_id = duty['_id']
     callback_data = fr'{callback_text}.{roster_id}'
-    print(button_text + ' ' + callback_data)
+    # print(button_text + ' ' + callback_data)
     return [InlineKeyboardButton(button_text, callback_data=callback_data)]
 
 def find_incomplete_duties(chat_id: int, user_id: int, from_date, to_date):
@@ -162,10 +162,35 @@ def find_incomplete_duties(chat_id: int, user_id: int, from_date, to_date):
     
     return incomplete_duties
 
-def send_chore_missing_message(update):
+def send_chore_missing_message(update: Update):
     query = update.callback_query
     message = 'Oops! This chore has been removed.'
     logger.info('Edit message:\n' + message)
     query.edit_message_text(text=message)
 
-cancel_button = [InlineKeyboardButton("Cancel", callback_data=fr'cancel')]
+cancel_button = [InlineKeyboardButton("✖ Cancel", callback_data=fr'cancel')]
+
+def add_name_to_duty(duty: dict) -> dict:
+    logger.info(fr'Add roster name to duty {duty["roster_id"]}')
+    roster = Rosters.find_one(duty['roster_id'])
+    duty['name'] = roster['name']
+    return duty
+
+def date_to_button(date: datetime.datetime, callback_text: str):
+    button_text = date.strftime("%a %d %b")
+    date_str = date.strftime("%x")
+    callback_data = fr'{callback_text}.{date_str}'
+    print(callback_data)
+    return [InlineKeyboardButton(button_text, callback_data=callback_data)]
+
+def is_duty_weekly(duty: dict, roster: dict):
+    roster_schedule = roster['schedule']
+    user_id = duty['user']
+    duty_date = duty['date']
+    duty_day = duty_date.weekday()
+
+    is_weekly_duty = any(
+        (us['dutyDay'] == duty_day and us['id'] == user_id)
+        for us in roster_schedule
+    )
+    return is_weekly_duty

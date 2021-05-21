@@ -90,6 +90,15 @@ from delete_chore import (
     delete_duty_weekly_callback,
 )
 
+from edit_chore import (
+    edit_command,
+    edit_duty_callback,
+    reschedule_duty_callback,
+    reschedule_duty_date_callback,
+    reschedule_duty_single_callback,
+    reschedule_duty_weekly_callback,
+)
+
 from helpers import (
     configure_telegram,
     # get_whitelisted_chats,
@@ -210,6 +219,14 @@ def add_handlers(dispatcher):
     dispatcher.add_handler(CallbackQueryHandler(delete_duty_callback, pattern=r'^deleteduty\.'))
     dispatcher.add_handler(CallbackQueryHandler(delete_duty_single_callback, pattern=r'^deletedutysingle\.'))
     dispatcher.add_handler(CallbackQueryHandler(delete_duty_weekly_callback, pattern=r'^deletedutyweekly\.'))
+
+    # v3 delete chore
+    dispatcher.add_handler(CommandHandler("edit", check_whitelist(edit_command)))
+    dispatcher.add_handler(CallbackQueryHandler(edit_duty_callback, pattern=r'^editduty\.'))
+    dispatcher.add_handler(CallbackQueryHandler(reschedule_duty_callback, pattern=r'^rescheduleduty\.'))
+    dispatcher.add_handler(CallbackQueryHandler(reschedule_duty_date_callback, pattern=r'^rescheduledutydate\.'))
+    dispatcher.add_handler(CallbackQueryHandler(reschedule_duty_single_callback, pattern=r'^rescheduledutysingle\.'))
+    dispatcher.add_handler(CallbackQueryHandler(reschedule_duty_weekly_callback, pattern=r'^rescheduledutyweekly\.'))
 
     # Beta message
     dispatcher.add_handler(CommandHandler("welcome", whitelist_user))

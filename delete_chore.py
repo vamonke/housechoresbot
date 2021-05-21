@@ -1,4 +1,5 @@
 import datetime
+import pprint
 from bson.objectid import ObjectId
 
 from telegram import (
@@ -104,16 +105,22 @@ def delete_duty_callback(update: Update, _: CallbackContext):
     _, duty_id = data.split(".")
     duty_id = ObjectId(duty_id)
     duty = Duties.find_one(duty_id)
-    duty_date = duty["date"]
-    duty_day = duty_date.weekday()
+
+    if duty is None:
+        return send_chore_missing_message(update)
+    if duty['user'] != user_id:
+        return logger.info('Unauthorised. User id mismatch. Ignoring..')
 
     # Find roster
     roster_id = duty["roster_id"]
     roster_id = ObjectId(roster_id)
     roster = Rosters.find_one(roster_id)
-    roster_schedule = roster["schedule"]
     duty["name"] = roster["name"]
 
+    # Check is duty is recurring
+    duty_date = duty["date"]
+    duty_day = duty_date.weekday()
+    roster_schedule = roster["schedule"]
     is_weekly_duty = any(
         (us['dutyDay'] == duty_day and us['id'] == user_id)
         for us in roster_schedule
@@ -154,7 +161,7 @@ def delete_single_duty(update: Update, duty: dict):
 def check_delete_weekly_duty(update: Update, duty: dict):
     """
         /delete -> [duty]
-        Check if duty is weekly. If yes, ask user if they want to delete recurring duties.
+        Ask user if they want to delete recurring duties
         Receive: duty_id
         Reply: Message or Yes/No
     """
@@ -180,8 +187,8 @@ def check_delete_weekly_duty(update: Update, duty: dict):
     keyboard = [
         [InlineKeyboardButton(button_text_single, callback_data=callback_data_single)],
         [InlineKeyboardButton(button_text_repeat, callback_data=callback_data_repeat)],
+        cancel_button,
     ]
-    keyboard.append(cancel_button)
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     logger.info('Edit message:\n' + message)
@@ -201,11 +208,20 @@ def delete_duty_single_callback(update: Update, _: CallbackContext):
     query = update.callback_query
     query.answer()
     
+    # Get user
+    user = update.effective_user
+    user_id = user.id
+
     # Find duty
     data = update.callback_query.data
     _, duty_id = data.split(".")
     duty_id = ObjectId(duty_id)
     duty = Duties.find_one(duty_id)
+
+    if duty is None:
+        return send_chore_missing_message(update)
+    if duty['user'] != user_id:
+        return logger.info('Unauthorised. User id mismatch. Ignoring..')
 
     # Find roster
     roster_id = duty["roster_id"]
@@ -221,7 +237,7 @@ def delete_duty_single_callback(update: Update, _: CallbackContext):
 def delete_duty_weekly_callback(update: Update, _: CallbackContext):
     """
         /delete -> [duty] -> [Delete this and future chores]
-        Delete selected duty and remove from roster
+        Delete duties and remove from roster schedule
         Receive: duty_id
         Reply: Message
     """
@@ -239,8 +255,11 @@ def delete_duty_weekly_callback(update: Update, _: CallbackContext):
     _, duty_id = data.split(".")
     duty_id = ObjectId(duty_id)
     duty = Duties.find_one(duty_id)
+
     if duty is None:
         return send_chore_missing_message(update)
+    if duty['user'] != user_id:
+        return logger.info('Unauthorised. User id mismatch. Ignoring..')
 
     # Find roster
     roster_id = duty["roster_id"]
@@ -272,19 +291,24 @@ def delete_duty_weekly_callback(update: Update, _: CallbackContext):
     logger.info('Edit message:\n' + message)
     query.edit_message_text(text=message, parse_mode=constants.PARSEMODE_MARKDOWN_V2)
 
-def delete_weekly_duty(roster_id: ObjectId, user_id: int, from_date):
+def delete_weekly_duty(roster_id: ObjectId, user_id: int, from_date: datetime.datetime):
     """ Remove future user duties from this roster """
-    logger.info(fr'Removing duties with user_id {user_id} and roster_id {roster_id} from {from_date} onwards')
-    result = Duties.delete_many(
-        {
-            'user': user_id,
-            'roster_id': roster_id,
-            'isCompleted': False,
-            'date': { '$gte': from_date },
-        }
-    )
-    logger.info('Bulk delete duties result:')
-    logger.info(result.raw_result)
+    logger.info(fr'Finding duties with user_id {user_id} and roster_id {roster_id} from {from_date} onwards')
+
+    matching_duties = Duties.find({
+        'user': user_id,
+        'roster_id': roster_id,
+        'isCompleted': False,
+        'date': { '$gte': from_date },
+    })
+
+    day_of_week = from_date.weekday()
+    logger.info(fr'Deleting duties same day as {from_date}')
+    for d in matching_duties:
+        if d['date'].weekday() == day_of_week:
+            result = Duties.delete_one({ '_id': d['_id'] })
+            logger.info('Delete duty result:')
+            logger.info(result)
 
 def remove_from_roster(roster: dict, user_id: int, duty_day: int):
     """ Remove existing user + day from roster schedule """
