@@ -2,3 +2,5 @@ __pycache__
 node_modules
 .serverless
 serverless.env.yml
+.ipynb_checkpoints
+*.ipynb
