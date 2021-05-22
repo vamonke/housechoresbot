@@ -126,10 +126,10 @@ def edit_duty_callback(update: Update, _: CallbackContext):
     message = fr'Edit chore: *{roster_name}* on *{duty_date_str}* by {user_text}'
 
     callback_data_one = f'rescheduleduty.{duty_id}'
-    callback_data_repeat = f'reassign.{duty_id}'
+    # callback_data_repeat = f'reassign.{duty_id}'
 
     keyboard = [
-        [InlineKeyboardButton("👤 Change person", callback_data=callback_data_repeat)],
+        # [InlineKeyboardButton("👤 Change person", callback_data=callback_data_repeat)],
         [InlineKeyboardButton("📅 Change date", callback_data=callback_data_one)],
         cancel_button,
     ]

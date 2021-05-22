@@ -22,10 +22,10 @@ functions:
     events:
       - http: POST /set_webhook
 
-  # routine:
-  #   handler: handler.routine
-  #   events:
-  #     - schedule: cron(0 2 * * ? *)
+  remind:
+    handler: remind.remind
+    events:
+      - schedule: cron(0 0 * * ? *)
 
 plugins:
   - serverless-python-requirements

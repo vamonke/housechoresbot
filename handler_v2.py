@@ -1,12 +1,10 @@
 # import random
 # import pymongo
 # import requests
+# import datetime
 import os
 import sys
 import json
-# import datetime
-# import pprint
-# from urllib.parse import urlencode
 
 if "TELEGRAM_TOKEN" not in os.environ:
     arg_token = sys.argv[1]
@@ -40,7 +38,7 @@ from telegram.ext import (
 )
 
 from commands_v2 import (
-    start,
+    # start,
     show_duties,
     # create_duties,
     show_rosters,
@@ -50,22 +48,22 @@ from commands_v2 import (
     # get_chat_id,
     # reschedule,
     # add_to_waitlist,
-    create_roster,
+    # create_roster,
     receive_roster_name,
-    join_roster_select,
-    join_roster,
-    add_to_new_roster,
-    add_to_roster,
-    mark_roster_as_done,
+    # join_roster_select,
+    # join_roster,
+    # add_to_new_roster,
+    # add_to_roster,
+    # mark_roster_as_done,
     show_rosters,
-    leave_roster_select,
-    leave_roster,
-    send_beta_v2,
+    # leave_roster_select,
+    # leave_roster,
+    # send_beta_v2,
     whitelist_user,
     check_whitelist,
     save_chat_group,
-    delete_roster_select,
-    delete_roster,
+    # delete_roster_select,
+    # delete_roster,
     cancel_callback,
 )
 
@@ -101,8 +99,6 @@ from edit_chore import (
 
 from helpers import (
     configure_telegram,
-    # get_whitelisted_chats,
-    # get_whitelisted_users
 )
 
 from logger import logger
@@ -116,22 +112,6 @@ ERROR_RESPONSE = {
     'statusCode': 400,
     'body': json.dumps('Oops, something went wrong!')
 }
-
-user_properties = [
-    'id',
-    'first_name',
-    'last_name',
-    'username',
-    'is_bot',
-    'language_code',
-]
-
-WHITELISTED_USER_IDS = [
-    # 265435469, # VAMONKE
-    808439673,
-    278239097,
-    59546722,
-]
 
 def webhook(event, context):
     """
@@ -182,11 +162,10 @@ def add_handlers(dispatcher):
     # Commands
     # dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
     # dispatcher.add_handler(CommandHandler("addchore", check_whitelist(create_roster)))
-    dispatcher.add_handler(MessageHandler(Filters.reply & ~Filters.command, check_whitelist(receive_roster_name)))
     # dispatcher.add_handler(CommandHandler("done", check_whitelist(mark_as_done)))
     dispatcher.add_handler(CommandHandler("chores", check_whitelist(show_duties)))
-    # dispatcher.add_handler(CommandHandler("join", check_whitelist(join_roster_select)))
     dispatcher.add_handler(CommandHandler("dutyroster", check_whitelist(show_rosters)))
+    # dispatcher.add_handler(CommandHandler("join", check_whitelist(join_roster_select)))
     # dispatcher.add_handler(CommandHandler("leave", check_whitelist(leave_roster_select)))
     # dispatcher.add_handler(CommandHandler("deleteroster", check_whitelist(delete_roster_select)))
     # dispatcher.add_handler(CommandHandler("reschedule", check_whitelist(reschedule)))
@@ -203,6 +182,7 @@ def add_handlers(dispatcher):
 
     # v3 add chore
     dispatcher.add_handler(CommandHandler("add", check_whitelist(add_command)))
+    dispatcher.add_handler(MessageHandler(Filters.reply & ~Filters.command, check_whitelist(receive_roster_name)))
     dispatcher.add_handler(CallbackQueryHandler(add_new_chore_callback, pattern=r'^addnewchore$'))
     dispatcher.add_handler(CallbackQueryHandler(add_existing_chore_callback, pattern=r'^addexistingchore\.'))
     dispatcher.add_handler(CallbackQueryHandler(add_chore_day_callback, pattern=r'^addchoreday\.'))
@@ -220,7 +200,7 @@ def add_handlers(dispatcher):
     dispatcher.add_handler(CallbackQueryHandler(delete_duty_single_callback, pattern=r'^deletedutysingle\.'))
     dispatcher.add_handler(CallbackQueryHandler(delete_duty_weekly_callback, pattern=r'^deletedutyweekly\.'))
 
-    # v3 delete chore
+    # v3 edit chore
     dispatcher.add_handler(CommandHandler("edit", check_whitelist(edit_command)))
     dispatcher.add_handler(CallbackQueryHandler(edit_duty_callback, pattern=r'^editduty\.'))
     dispatcher.add_handler(CallbackQueryHandler(reschedule_duty_callback, pattern=r'^rescheduleduty\.'))

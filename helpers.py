@@ -194,3 +194,21 @@ def is_duty_weekly(duty: dict, roster: dict):
         for us in roster_schedule
     )
     return is_weekly_duty
+
+def create_chat(update):
+    # Get user
+    user = update.effective_user
+    user_id = user.id
+
+    # Get chat
+    chat = update.effective_chat
+    chat_dict = get_chat_dict_from_chat(chat)
+    chat_dict['addedBy'] = user_id
+    chat_dict['createdAt'] = datetime.datetime.now()
+
+    # Add chat
+    Chats.update_one(
+        { 'id': chat_dict['id'] },
+        { '$set': chat_dict },
+        upsert=True
+    )

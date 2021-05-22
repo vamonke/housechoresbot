@@ -771,7 +771,7 @@ def show_duties(update: Update, _: CallbackContext):
         if roster_duties:
             roster_name = roster['name']
             for duty in roster_duties:
-                user_text = get_name_from_user_id(duty['user'])
+                user_text = get_name_from_user_id(duty['user']) #TODO: Optimize
                 duty_line = fr'\- {roster_name}\: {user_text}'
 
                 if 'isCompleted' in duty and duty['isCompleted']:

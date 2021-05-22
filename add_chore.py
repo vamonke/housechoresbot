@@ -45,6 +45,7 @@ from helpers import (
     add_user_to_roster,
     week_days,
     week_days_short,
+    create_chat,
     # send_gif,
     # duty_to_button,
 )
@@ -65,6 +66,9 @@ def add_command(update: Update, _: CallbackContext):
     """
     # Get user
     user = update.effective_user
+    
+    # Onboard user and chat
+    create_chat(update)
     create_user(user)
 
     # Get rosters
@@ -259,6 +263,9 @@ def add_chore_single(update: Update, _: CallbackContext):
 
     start_of_week = today - datetime.timedelta(days=today.weekday())
     duty_date = start_of_week + datetime.timedelta(days=duty_day)
+
+    print(f'duty_date {duty_date.weekday()}')
+    print(f'today {today.weekday()}')
 
     if duty_date.weekday() < today.weekday():
         duty_date += datetime.timedelta(weeks=1)

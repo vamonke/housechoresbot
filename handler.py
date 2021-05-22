@@ -308,7 +308,7 @@ def routine(event, context):
         )
         logger.info(fr'Message sent: {message}')
 
-    create_duties()
+    # create_duties()
 
 def get_whitelist_filter():
     chat_ids = get_whitelisted_chats()
