@@ -38,7 +38,7 @@ from telegram.ext import (
 )
 
 from commands_v2 import (
-    # start,
+    start,
     show_duties,
     # create_duties,
     show_rosters,
@@ -160,7 +160,7 @@ def set_webhook(event, context):
 
 def add_handlers(dispatcher):
     # Commands
-    # dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
+    dispatcher.add_handler(CommandHandler("start", check_whitelist(start)))
     # dispatcher.add_handler(CommandHandler("addchore", check_whitelist(create_roster)))
     # dispatcher.add_handler(CommandHandler("done", check_whitelist(mark_as_done)))
     dispatcher.add_handler(CommandHandler("chores", check_whitelist(show_duties)))

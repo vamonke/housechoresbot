@@ -60,7 +60,7 @@ GET_ROSTER_NAME = 0
 
 WEEKS_IN_ADVANCE = 2
 
-INTRO_MESSAGE = 'I\'m a bot that helps you keep track of household chores\.\n\nYou can create chores\, schedule weekly duties and mark them as done\. I also send reminders so you won\'t forget about them 😉\n\nGet started by sending \/addchore to create a chore\.'
+INTRO_MESSAGE = 'I\'m a bot that helps you keep track of household chores\.\n\nYou can create chores\, schedule weekly duties and mark them as done\. I also send reminders so you won\'t forget about them 😉\n\nGet started by sending \/add to create a chore\.\n\nI\'m still in beta so if you discovered any issues\/bugs, let my creator know using \/feedback'
 
 def start(update: Update, _: CallbackContext):
     """ Create chat and user """
@@ -239,7 +239,7 @@ def show_rosters(update: Update, _: CallbackContext):
     rosters = list(rosters)
 
     if not rosters:
-        message = r"🤷 No chores found\. Send \/addchore to create a weekly chore\."
+        message = r"🤷 No chores found\. Send \/add to create a chore\."
         logger.info('Reply message:\n' + message)
         update.message.reply_markdown_v2(message, quote=False)
         return
@@ -411,7 +411,7 @@ def join_roster(update: Update, _: CallbackContext):
     is_join_new_roster = join_type == 'joinnewroster'
 
     if roster is None:
-        message = 'Oops! This chore has been removed. You can create a new weekly chore by sending /addchore.'
+        message = 'Oops! This chore has been removed. You can create a new chore by sending /add'
         logger.info('Edit message:\n' + message)
         query.edit_message_text(text=message)
         return
@@ -504,7 +504,7 @@ def add_to_new_roster(update: Update, _: CallbackContext):
 
     if roster is None:
         logger.info(f'Tried to add user to roster {roster_id} but the roster has been removed')
-        message = 'Oops! This chore has been removed. You can create a new weekly chore by sending /addchore.'
+        message = 'Oops! This chore has been removed. You can create a new chore by sending /add'
         logger.info('Edit message:\n' + message)
         query.edit_message_text(text=message)
         return
@@ -629,7 +629,7 @@ def add_to_roster(update: Update, _: CallbackContext):
     roster = Rosters.find_one(roster_id)
 
     if roster is None:
-        message = 'Oops! This chore has been removed. You can create a new weekly chore by sending /addchore.'
+        message = 'Oops! This chore has been removed. You can create a new weekly chore by sending /add'
         logger.info('Edit message:\n' + message)
         query.edit_message_text(text=message)
         return
