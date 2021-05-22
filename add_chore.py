@@ -1,8 +1,8 @@
 # import random
 # import requests
-# import pymongo
 # import os
 # import json
+import pymongo
 import datetime
 from bson.objectid import ObjectId
 
@@ -53,9 +53,8 @@ from helpers import (
 from logger import logger
 
 WEEKS_IN_ADVANCE = 2
-
-
-WEEKS_IN_ADVANCE = 2
+HOUSE_CHORES_BOT_ID = 1783406286
+DUTY_ROSTER_BOT_ID = 1798724954
 
 def add_command(update: Update, _: CallbackContext):
     """
@@ -117,6 +116,80 @@ def add_new_chore_callback(update: Update, _: CallbackContext):
         text=message,
         reply_markup=ForceReply(selective=True),
         quote=False,
+    )
+
+def receive_roster_name(update: Update, _: CallbackContext):
+    """Create roster with chat_id and name"""
+    
+    # Verify if message is reply to bot create_roster message
+
+    # Check sender of create_roster message
+    message = update.effective_message
+    reply_to_message = message.reply_to_message
+    user_to_reply_id = reply_to_message.from_user.id
+    if user_to_reply_id not in [HOUSE_CHORES_BOT_ID, DUTY_ROSTER_BOT_ID]:
+        return
+    
+    # Check content of create_roster message
+    substring = 'what\'s the name of the chore?'
+    message_to_reply = reply_to_message.text
+    if substring not in message_to_reply:
+        return
+
+    name = update.message.text
+    user = update.effective_user
+    chat_id = update.message.chat.id
+
+    logger.info(f"Creating roster {name} by {user.id}")
+    roster = {
+        'name': name,
+        'chat_id': chat_id,
+        'createdAt': datetime.datetime.now(),
+        'interval': 'week',
+        'createdBy': user.id,
+        'schedule': [],
+    }
+
+    result = Rosters.find_one_and_update(
+        {
+            'name': name,
+            'chat_id': chat_id,
+        },
+        { '$setOnInsert': roster },
+        upsert=True,
+        return_document=pymongo.ReturnDocument.AFTER,
+    )
+
+    user_text = user.mention_markdown_v2()
+
+    message = fr'New chore: *{name}*' + '\n'
+    message += fr'{user_text} Choose a day to perform this chore'
+
+    roster_id = result['_id']
+
+    keyboard = [
+        [
+            InlineKeyboardButton("Mon", callback_data=fr'addchoreday.{roster_id}.0'),
+            InlineKeyboardButton("Tue", callback_data=fr'addchoreday.{roster_id}.1'),
+            InlineKeyboardButton("Wed", callback_data=fr'addchoreday.{roster_id}.2'),
+            InlineKeyboardButton("Thu", callback_data=fr'addchoreday.{roster_id}.3'),
+            InlineKeyboardButton("Fri", callback_data=fr'addchoreday.{roster_id}.4'),
+        ],
+        [
+            InlineKeyboardButton("Sat", callback_data=fr'addchoreday.{roster_id}.5'),
+            InlineKeyboardButton("Sun", callback_data=fr'addchoreday.{roster_id}.6'),
+        ],
+        [
+            InlineKeyboardButton("Cancel", callback_data=fr'cancel'),
+        ],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    logger.info('Reply message:\n' + message)
+    update.message.reply_markdown_v2(
+        text=message,
+        quote=False,
+        reply_markup=reply_markup
     )
 
 def add_existing_chore_callback(update: Update, _: CallbackContext):
