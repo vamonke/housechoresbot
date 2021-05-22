@@ -26,6 +26,7 @@ def feedback_command(update: Update, context: CallbackContext):
     logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(
         text=message,
+        quote=False,
         reply_markup=ForceReply(selective=True),
     )
 
@@ -55,6 +56,7 @@ def receive_feedback(update: Update, context: CallbackContext):
 
     update.message.reply_markdown_v2(
         text=message,
+        quote=False,
     )
 
     creator_message = fr"📮 Feedback received from {user_text}:" + "\n" + feedback_text
