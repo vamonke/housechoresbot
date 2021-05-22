@@ -1,5 +1,5 @@
 import datetime
-import pprint
+# import pprint
 from bson.objectid import ObjectId
 
 from telegram import (
@@ -19,10 +19,6 @@ from mongo import (
     Duties,
     # Users,
 )
-
-# from commands_v2 import (
-#     roster_to_button,
-# )
 
 from helpers import (
     duty_to_button,

@@ -13,12 +13,12 @@ provider:
 
 functions:
   webhook:
-    handler: handler_v2.webhook
+    handler: handler.webhook
     events:
       - http: POST /
 
   set_webhook:
-    handler: handler_v2.set_webhook
+    handler: handler.set_webhook
     events:
       - http: POST /set_webhook
 

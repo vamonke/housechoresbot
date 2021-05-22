@@ -37,7 +37,7 @@ from telegram.ext import (
     Updater,
 )
 
-from commands_v2 import (
+from commands import (
     start,
     show_duties,
     # create_duties,

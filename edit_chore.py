@@ -20,7 +20,7 @@ from mongo import (
     # Users,
 )
 
-from commands_v2 import (
+from commands import (
     create_user_duties,
 )
 

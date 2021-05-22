@@ -1,7 +1,5 @@
 import pymongo
 import time
-# import os
-# import json
 import datetime
 from bson.objectid import ObjectId
 
@@ -20,12 +18,6 @@ from telegram import (
 
 from telegram.ext import (
     CallbackContext,
-    # CallbackQueryHandler,
-    # CommandHandler,
-    ConversationHandler,
-    # Filters,
-    # MessageHandler,
-    # Updater,
 )
 
 from mongo import (
@@ -34,7 +26,6 @@ from mongo import (
     Rosters,
     Duties,
     Users,
-    # Waitlist,
 )
 
 from helpers import (
@@ -53,10 +44,6 @@ from logger import logger
 
 HOUSE_CHORES_BOT_ID = 1783406286
 DUTY_ROSTER_BOT_ID = 1798724954
-
-GET_ROSTER_NAME = 0
-# JOIN_ROSTER = 1
-# SELECT_DUTY_DAY = 2
 
 WEEKS_IN_ADVANCE = 2
 
