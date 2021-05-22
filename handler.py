@@ -1,7 +1,3 @@
-# import random
-# import pymongo
-# import requests
-# import datetime
 import os
 import sys
 import json
@@ -18,19 +14,12 @@ if "MONGODB_URI" not in os.environ:
 
 from telegram import (
     Update,
-    # Bot,
-    # User,
-    # InlineKeyboardMarkup,
-    # InlineKeyboardButton,
-    # constants
 )
 
 from telegram.ext import (
-    # CallbackContext,
     CallbackQueryHandler,
     ChatMemberHandler,
     CommandHandler,
-    # ConversationHandler,
     Dispatcher,
     Filters,
     MessageHandler,
@@ -65,9 +54,13 @@ from commands import (
     cancel_callback,
 )
 
+from feedback import (
+    feedback_command,
+    reply_message_handler,
+)
+
 from add_chore import (
     add_command,
-    receive_roster_name,
     add_new_chore_callback,
     add_chore_day_callback,
     add_chore_single,
@@ -182,7 +175,7 @@ def add_handlers(dispatcher):
 
     # v3 add chore
     dispatcher.add_handler(CommandHandler("add", check_whitelist(add_command)))
-    dispatcher.add_handler(MessageHandler(Filters.reply & ~Filters.command, check_whitelist(receive_roster_name)))
+    dispatcher.add_handler(MessageHandler(Filters.reply & ~Filters.command, check_whitelist(reply_message_handler)))
     dispatcher.add_handler(CallbackQueryHandler(add_new_chore_callback, pattern=r'^addnewchore$'))
     dispatcher.add_handler(CallbackQueryHandler(add_existing_chore_callback, pattern=r'^addexistingchore\.'))
     dispatcher.add_handler(CallbackQueryHandler(add_chore_day_callback, pattern=r'^addchoreday\.'))
@@ -192,6 +185,10 @@ def add_handlers(dispatcher):
     # v3 done chore
     dispatcher.add_handler(CommandHandler("done", check_whitelist(done_command)))
     dispatcher.add_handler(CallbackQueryHandler(mark_duty_as_done_callback, pattern=r'^dutydone'))
+    
+    # feedback
+    dispatcher.add_handler(CommandHandler("feedback", feedback_command))
+    # dispatcher.add_handler(CallbackQueryHandler(mark_duty_as_done_callback, pattern=r'^dutydone'))
 
     # v3 delete chore
     dispatcher.add_handler(CommandHandler("delete", check_whitelist(delete_command)))
