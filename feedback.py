@@ -21,7 +21,10 @@ def feedback_command(update: Update, context: CallbackContext):
     if context.args:
         return receive_feedback(update, context)
 
-    message = fr"💬 Have a suggestion or found a bug\? Let me know by replying to this message\."
+    user = update.effective_user
+    user_text = user.mention_markdown_v2()
+
+    message = fr" {user_text} 💬 Have a suggestion or found a bug\? Let me know by replying to this message\."
 
     logger.info('Reply message:\n' + message)
     update.message.reply_markdown_v2(

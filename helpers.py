@@ -78,17 +78,18 @@ def get_whitelisted_users():
     return user_ids
 
 def get_is_whitelisted(update):
-    user_id = update.effective_user.id
-    user_dict = Users.find_one({ 'id': user_id })
-    if user_dict and user_dict.get('isWhitelisted'):
-        return True
+    return True
+    # user_id = update.effective_user.id
+    # user_dict = Users.find_one({ 'id': user_id })
+    # if user_dict and user_dict.get('isWhitelisted'):
+    #     return True
 
-    chat_id = update.effective_chat.id
-    chat_dict = Chats.find_one({ 'id': chat_id })
-    if chat_dict and chat_dict.get('isWhitelisted'):
-        return True
+    # chat_id = update.effective_chat.id
+    # chat_dict = Chats.find_one({ 'id': chat_id })
+    # if chat_dict and chat_dict.get('isWhitelisted'):
+    #     return True
 
-    return False
+    # return False
 
 def configure_telegram():
     """
